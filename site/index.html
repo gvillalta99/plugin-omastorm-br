@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omastorm</title>
+<meta name="description" content="Weather radar for the Omarchy desktop. Live NEXRAD, drawn from the measured data in the monospace pixel language of the shell.">
+<meta name="color-scheme" content="dark light">
+<meta property="og:title" content="Omastorm">
+<meta property="og:description" content="Weather radar for the Omarchy desktop.">
+<meta property="og:image" content="https://omastorm.com/radar-dark.png">
+<meta property="og:url" content="https://omastorm.com/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231a1b26'/%3E%3Cpath d='M8 2 14 8 8 14 2 8Z' fill='none' stroke='%237aa2f7' stroke-width='1.5'/%3E%3Cpath d='M8 5.5 10.5 8 8 10.5 5.5 8Z' fill='%237aa2f7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root {
+    --bg: #1a1b26;
+    --fg: #a9b1d6;
+    --dim: #565f89;
+    --line: #2f3349;
+    --accent: #7aa2f7;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f1e8;
+      --fg: #343a48;
+      --dim: #7a8194;
+      --line: #d9d3c6;
+      --accent: #365ba8;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body {
+    font-family: "JetBrains Mono", "JetBrainsMono Nerd Font", "Cascadia Mono", ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .row .right { color: var(--dim); text-align: right; }
+  .row .right.tag { color: var(--accent); }
+  .mark { font-weight: 700; color: var(--fg); text-decoration: none; }
+  .mark .glyph { color: var(--accent); margin-right: 0.6em; }
+  .rule { height: 1px; background: var(--line); }
+  figure { margin: 0; }
+  .frame {
+    border: 1px solid var(--line);
+    background: var(--bg);
+    line-height: 0;
+  }
+  .frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: auto;
+  }
+  @media (max-width: 640px) {
+    /* Portrait crop centred on the Moore cell so the storm stays legible on phones. */
+    .frame img {
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      object-position: 51% 58%;
+    }
+  }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .lede {
+    max-width: 62ch;
+    margin: 28px 0 0;
+    font-size: clamp(16px, 2.2vw, 22px);
+    line-height: 1.45;
+  }
+  .lede b { color: var(--fg); font-weight: 700; }
+  .lede .cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    vertical-align: -0.15em;
+    margin-left: 0.15em;
+    background: var(--accent);
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .lede .cursor { animation: none; } }
+  .points {
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 6px 32px;
+    color: var(--dim);
+  }
+  .points li::before { content: "▪ "; color: var(--accent); }
+  .points li b { color: var(--fg); font-weight: 400; }
+  footer {
+    margin-top: auto;
+    padding-top: 28px;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  footer a { color: inherit; }
+  .foot {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 640px) {
+    main { padding: 14px; gap: 10px; }
+    .row { font-size: 12px; }
+    .row .right.sub { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="row">
+    <a class="mark" href="/"><span class="glyph">◈</span>OMASTORM</a>
+    <span class="right tag">In development</span>
+  </div>
+  <div class="rule"></div>
+  <div class="row">
+    <span><b>KTLX</b> <span style="color:var(--dim)">Oklahoma City</span></span>
+    <span class="right sub">Reflectivity / 0.5°</span>
+  </div>
+
+  <figure>
+    <div class="frame">
+      <picture>
+        <source srcset="radar-light.png" media="(prefers-color-scheme: light)">
+        <img src="radar-dark.png" width="1158" height="540"
+             alt="Radar reflectivity over central Oklahoma drawn as block glyphs on a thin-line map, with a supercell over Moore and a line of storms toward Guthrie and Cushing.">
+      </picture>
+    </div>
+    <figcaption>
+      <span>2013-05-20 20:16:43 UTC · archived scan, not current weather</span>
+      <span>Rings 50 km · every cell is one measured gate</span>
+    </figcaption>
+  </figure>
+
+  <p class="lede">
+    Weather radar for the Omarchy desktop. Live NEXRAD, drawn from the
+    <b>measured data</b> in the monospace pixel language of the shell.<span class="cursor" aria-hidden="true"></span>
+  </p>
+
+  <ul class="points">
+    <li><b>Native.</b> Colors and font follow your theme, instantly.</li>
+    <li><b>Honest.</b> No mosaic, no vendor grid. What the radar saw, when it saw it.</li>
+    <li><b>Live.</b> Sweeps paint as the antenna turns.</li>
+    <li><b>Keyboard first.</b> Every site in the network, a keystroke away.</li>
+  </ul>
+</main>
+<footer>
+  <div class="foot">
+    <span>Radar: NOAA NEXRAD · Map: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, Natural Earth</span>
+    <span>© 2026 Wesley Grimes</span>
+  </div>
+</footer>
+</body>
+</html>

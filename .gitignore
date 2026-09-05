@@ -1,0 +1,31 @@
+# Checkout-local Rust toolchain and Cargo output
+.tools/
+target/
+
+# Fixture and geography downloads (scripts/setup-fixture.sh)
+data/raw/
+
+# Generated captures, check output, and README media
+# (scripts/check-*.sh, scripts/capture-*.sh); the media ships as release assets
+review/
+docs/media/*
+!docs/media/README.md
+
+# Wrangler local state (site/ deploys)
+.wrangler/
+
+# Local working notes, never committed
+PLAN.md
+
+# Editor and tool state
+.venv/
+.agents/
+.codex/
+__pycache__/
+*.qmlc
+*.jsc
+*.qmlls.ini
+
+# Unpublished sharing copy and legacy derived data, kept local
+docs/sharing.md
+data/derived/
