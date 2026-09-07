@@ -2,7 +2,11 @@
 
 Static, no build step: `index.html`, the live take as `take.mp4` with
 `take-poster.png` as its poster and the Open Graph image, and `_headers` for
-cache lifetimes. The two media files are generated and ignored, like the
+cache lifetimes, plus the mark as favicon and touch icon: `mark.svg` is the
+16-grid app-colored SVG from `branding/mark` with its cells merged into one
+path per color, and `mark-32.png` and `mark-256.png` are copies of the
+branding exports. The header draws the same 16 px mark inline in the page
+foreground, its cells from `ui/RadarMark.qml`. The two media files are generated and ignored, like the
 README media, so the plugin clone stays small; cut them before a deploy. The
 page follows the visitor's color scheme; the take was
 filmed in the dark theme and stays dark in both.
