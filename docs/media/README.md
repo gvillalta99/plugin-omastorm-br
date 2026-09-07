@@ -9,6 +9,7 @@ Regenerate from a working desktop OpenGL session:
 ```sh
 bash scripts/capture-readme.sh   # window-live.png, popover.png (live KTLX)
 bash scripts/capture-demo.sh     # omastorm-demo.mp4, omastorm-preview.gif, six treatment stills
+bash scripts/capture-demo-live.sh   # omastorm-live-demo.mp4: one live take on KJAX, 1280×720, for the announcement
 ```
 
 Both write into this directory, which is ignored except for this file. They
