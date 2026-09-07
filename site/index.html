@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omastorm</title>
-<meta name="description" content="Weather radar for the Omarchy desktop. Live NEXRAD, drawn from the measured data in the monospace pixel language of the shell.">
+<meta name="description" content="Live NEXRAD radar for the Omarchy desktop. Every site, a scrubbable timeline, three treatments, your theme. Beta.">
 <meta name="color-scheme" content="dark light">
 <meta property="og:title" content="Omastorm">
-<meta property="og:description" content="Weather radar for the Omarchy desktop.">
-<meta property="og:image" content="https://omastorm.com/radar-dark.png">
+<meta property="og:description" content="Live NEXRAD radar for the Omarchy desktop. Beta.">
+<meta property="og:image" content="https://omastorm.com/take-poster.png">
 <meta property="og:url" content="https://omastorm.com/">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231a1b26'/%3E%3Cpath d='M8 2 14 8 8 14 2 8Z' fill='none' stroke='%237aa2f7' stroke-width='1.5'/%3E%3Cpath d='M8 5.5 10.5 8 8 10.5 5.5 8Z' fill='%237aa2f7'/%3E%3C/svg%3E">
@@ -22,6 +22,7 @@
     --dim: #565f89;
     --line: #2f3349;
     --accent: #7aa2f7;
+    --well: #16161e;
   }
   @media (prefers-color-scheme: light) {
     :root {
@@ -30,6 +31,7 @@
       --dim: #7a8194;
       --line: #d9d3c6;
       --accent: #365ba8;
+      --well: #ebe6da;
     }
   }
   * { box-sizing: border-box; }
@@ -43,6 +45,8 @@
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
   }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
   main {
     width: 100%;
     max-width: 1200px;
@@ -63,28 +67,23 @@
   }
   .row .right { color: var(--dim); text-align: right; }
   .row .right.tag { color: var(--accent); }
+  .row .right.tag a { color: inherit; }
   .mark { font-weight: 700; color: var(--fg); text-decoration: none; }
   .mark .glyph { color: var(--accent); margin-right: 0.6em; }
   .rule { height: 1px; background: var(--line); }
   figure { margin: 0; }
   .frame {
+    position: relative;
     border: 1px solid var(--line);
-    background: var(--bg);
+    background: #1a1b26;
     line-height: 0;
   }
-  .frame img {
+  .frame video {
     display: block;
     width: 100%;
     height: auto;
-    image-rendering: auto;
-  }
-  @media (max-width: 640px) {
-    /* Portrait crop centred on the Moore cell so the storm stays legible on phones. */
-    .frame img {
-      aspect-ratio: 4 / 5;
-      object-fit: cover;
-      object-position: 51% 58%;
-    }
+    aspect-ratio: 16 / 9;
+    background: #1a1b26;
   }
   figcaption {
     display: flex;
@@ -125,6 +124,69 @@
   }
   .points li::before { content: "▪ "; color: var(--accent); }
   .points li b { color: var(--fg); font-weight: 400; }
+
+  /* Install */
+  section.install { margin-top: 36px; display: flex; flex-direction: column; gap: 14px; }
+  .cmd {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--line);
+    background: var(--well);
+  }
+  .cmd pre {
+    flex: 1;
+    margin: 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--fg);
+    white-space: pre;
+  }
+  .cmd pre .p { color: var(--dim); user-select: none; }
+  .cmd pre .a { color: var(--accent); }
+  .cmd pre .c { color: var(--dim); }
+  .cmd button {
+    flex: none;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: transparent;
+    color: var(--dim);
+    font: inherit;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0 16px;
+    cursor: pointer;
+  }
+  .cmd button:hover, .cmd button:focus-visible { color: var(--accent); outline: none; }
+  .cmd button[data-done] { color: var(--accent); }
+  .steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px 32px;
+    color: var(--dim);
+    counter-reset: step;
+  }
+  .steps li { counter-increment: step; }
+  .steps li::before {
+    content: counter(step, decimal-leading-zero) " ";
+    color: var(--accent);
+    margin-right: 0.4em;
+  }
+  .steps li b { color: var(--fg); font-weight: 400; }
+  .steps code, .fine code {
+    font: inherit;
+    color: var(--fg);
+    background: var(--well);
+    padding: 0 0.35em;
+    border: 1px solid var(--line);
+  }
+  .fine { margin: 0; color: var(--dim); font-size: 12px; max-width: 78ch; }
   footer {
     margin-top: auto;
     padding-top: 28px;
@@ -132,7 +194,7 @@
     font-size: 11px;
     letter-spacing: 0.04em;
   }
-  footer a { color: inherit; }
+  footer a { color: inherit; text-decoration: underline; }
   .foot {
     width: 100%;
     max-width: 1200px;
@@ -147,6 +209,7 @@
     main { padding: 14px; gap: 10px; }
     .row { font-size: 12px; }
     .row .right.sub { display: none; }
+    .cmd pre { font-size: 12px; }
   }
 </style>
 </head>
@@ -154,45 +217,96 @@
 <main>
   <div class="row">
     <a class="mark" href="/"><span class="glyph">◈</span>OMASTORM</a>
-    <span class="right tag">In development</span>
+    <span class="right tag"><a href="https://github.com/wesleygrimes/omastorm/releases/tag/v0.1.2">Beta 0.1.2</a></span>
   </div>
   <div class="rule"></div>
   <div class="row">
-    <span><b>KTLX</b> <span style="color:var(--dim)">Oklahoma City</span></span>
-    <span class="right sub">Reflectivity / 0.5°</span>
+    <span><b>KJAX</b> <span style="color:var(--dim)">Jacksonville</span></span>
+    <span class="right sub">Reflectivity / 0.5° / Live</span>
   </div>
 
   <figure>
     <div class="frame">
-      <picture>
-        <source srcset="radar-light.png" media="(prefers-color-scheme: light)">
-        <img src="radar-dark.png" width="1158" height="540"
-             alt="Radar reflectivity over central Oklahoma drawn as block glyphs on a thin-line map, with a supercell over Moore and a line of storms toward Guthrie and Cushing.">
-      </picture>
+      <video id="take" autoplay muted loop playsinline preload="metadata"
+             poster="take-poster.png" width="1280" height="720"
+             aria-label="One live take of the Omastorm window on the Jacksonville radar: the loop plays, the view pans and zooms to the coast, the three treatments switch, weak returns show, the picker finds Tallahassee, and the keys sheet opens.">
+        <source src="take.mp4" type="video/mp4">
+      </video>
     </div>
     <figcaption>
-      <span>2013-05-20 20:16:43 UTC · archived scan, not current weather</span>
-      <span>Rings 50 km · every cell is one measured gate</span>
+      <span>2026-09-07 · one live take, sped up slightly · <a href="https://github.com/wesleygrimes/omastorm/releases/download/v0.1.0/omastorm-demo.mp4">full quality</a></span>
+      <span>Loop · pan and zoom · Glyphs, Pixels, Stipple · weak returns · picker · keys</span>
     </figcaption>
   </figure>
 
   <p class="lede">
-    Weather radar for the Omarchy desktop. Live NEXRAD, drawn from the
+    Live NEXRAD radar for the Omarchy desktop. Every site in the network, drawn from the
     <b>measured data</b> in the monospace pixel language of the shell.<span class="cursor" aria-hidden="true"></span>
   </p>
 
   <ul class="points">
-    <li><b>Native.</b> Colors and font follow your theme, instantly.</li>
-    <li><b>Honest.</b> No mosaic, no vendor grid. What the radar saw, when it saw it.</li>
-    <li><b>Live.</b> Sweeps paint as the antenna turns.</li>
-    <li><b>Keyboard first.</b> Every site in the network, a keystroke away.</li>
+    <li><b>Live.</b> Sweeps paint as the antenna turns. Stale data says so.</li>
+    <li><b>Every site.</b> Pan and the map follows the nearest station, or search by id, city, or state.</li>
+    <li><b>Timeline.</b> The last 60 scans per station, cached. Play, step, scrub.</li>
+    <li><b>Native.</b> Colors, font, and spacing come from your Omarchy theme and change with it.</li>
+    <li><b>Keyboard first.</b> Every control is a keystroke, and every key is rebindable.</li>
+    <li><b>Honest.</b> Actual scan times. No forecasts, no mosaic, no vendor grid.</li>
   </ul>
+
+  <section class="install" id="install">
+    <div class="row">
+      <span>Install</span>
+      <span class="right">Omarchy 4 · x86_64</span>
+    </div>
+    <div class="rule"></div>
+    <div class="cmd">
+      <pre><code id="install-cmd"><span class="p">$ </span>omarchy plugin add <span class="a">https://github.com/wesleygrimes/omastorm</span> --enable</code></pre>
+      <button type="button" data-copy="install-cmd" aria-label="Copy the install command">Copy</button>
+    </div>
+    <ol class="steps">
+      <li><b>Pick a bar section</b> when asked. The mark appears in the bar; click it for the popover, the home station, and the actual scan time.</li>
+      <li><b>First open</b> fetches the pinned engine binary from GitHub Releases, checks its sha256, and keeps it under <code>~/.local/share/omastorm</code>. Nothing else leaves the plugin's own directories.</li>
+      <li><b>Expand</b> for the window: every site, the timeline, three treatments. Press <code>?</code> for the keys.</li>
+    </ol>
+    <div class="cmd">
+      <pre><code id="bind-cmd"><span class="c">-- ~/.config/hypr/bindings.lua, optional: open the window from the keyboard</span>
+o.bind("SUPER + SHIFT + R", "Omastorm", "omarchy shell shell toggle com.omastorm.radar '{}'")</code></pre>
+      <button type="button" data-copy="bind-cmd" aria-label="Copy the key binding">Copy</button>
+    </div>
+    <p class="fine">
+      Update with <code>omarchy plugin update com.omastorm.radar</code>. The README covers
+      configuration, the key table, and removal. This is a beta; rough edges go to
+      <a href="https://github.com/wesleygrimes/omastorm/issues">GitHub issues</a>.
+    </p>
+  </section>
 </main>
 <footer>
   <div class="foot">
-    <span>Radar: NOAA NEXRAD · Map: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, Natural Earth</span>
-    <span>© 2026 Wesley Grimes</span>
+    <span><a href="https://github.com/wesleygrimes/omastorm">GitHub</a> · <a href="https://github.com/wesleygrimes/omastorm#readme">README</a> · <a href="https://github.com/wesleygrimes/omastorm/releases">Releases</a> · MIT</span>
+    <span>Radar: NOAA NEXRAD · Map: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, <a href="https://openfreemap.org">OpenFreeMap</a>, Natural Earth · © 2026 Wesley Grimes</span>
   </div>
 </footer>
+<script>
+  // Reduced motion: hold the poster and hand the visitor the controls.
+  var take = document.getElementById("take");
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    take.removeAttribute("autoplay");
+    take.removeAttribute("loop");
+    take.controls = true;
+    take.pause();
+  }
+  // Copy buttons take the command text without the prompt glyph.
+  document.querySelectorAll("button[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var code = document.getElementById(b.dataset.copy).cloneNode(true);
+      code.querySelectorAll(".p").forEach(function (p) { p.remove(); });
+      navigator.clipboard.writeText(code.textContent.trim()).then(function () {
+        b.textContent = "Copied";
+        b.dataset.done = "";
+        setTimeout(function () { b.textContent = "Copy"; delete b.dataset.done; }, 1500);
+      });
+    });
+  });
+</script>
 </body>
 </html>

@@ -29,3 +29,7 @@ __pycache__/
 # Unpublished sharing copy and legacy derived data, kept local
 docs/sharing.md
 data/derived/
+
+# Site media, cut from docs/media by the commands in site/README.md
+site/take.mp4
+site/take-poster.png
