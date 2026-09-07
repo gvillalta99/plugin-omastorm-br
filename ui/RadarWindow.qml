@@ -195,6 +195,7 @@ Item {
         case "search": treatmentMenu.close(); picker.show(""); break;
         case "nearest": nearest(); break;
         case "lock": toggleLock(); break;
+        case "home": setHome(); break;
         case "pan_left": map.pan(-1, 0); break;
         case "pan_right": map.pan(1, 0); break;
         case "pan_up": map.pan(0, -1); break;
@@ -234,6 +235,17 @@ Item {
     readonly property bool locked: state ? state.site.locked : false
     readonly property bool following: state ? state.site.follow && !state.site.locked : false
     function toggleLock() { if (state) engine.send({type: "lock", enabled: !locked}); }
+    // Shift+H or the HOME control: the station on screen becomes home_site in
+    // config.toml (Config.setHome); the status slot confirms it for a moment
+    // and the header's HOME tag follows the file.
+    property string notice: ""
+    Timer { id: noticeTimer; interval: 3000; onTriggered: app.notice = "" }
+    function setHome() {
+        if (!state || !siteId) return;
+        config.setHome(siteId);
+        notice = "HOME · " + siteId + " SAVED TO CONFIG.TOML";
+        noticeTimer.restart();
+    }
     function nearest() {
         var s = map.nearest();
         if (!state || !s) return;
@@ -451,10 +463,10 @@ Item {
                 // config.toml mistake stands there the same way until the
                 // file is fixed. The radar underneath stays clear.
                 LabelText {
-                    text: engine.rejection || app.configError || app.sourceDetail
-                    color: engine.rejection || app.configError ? app.theme.accent : app.conditionColor
-                    opacity: engine.rejection || app.configError || app.alert ? 1 : .5
-                    visible: !win.compact || engine.rejection !== "" || app.configError !== "" || app.alert
+                    text: engine.rejection || app.configError || app.notice || app.sourceDetail
+                    color: engine.rejection || app.configError || app.notice ? app.theme.accent : app.conditionColor
+                    opacity: engine.rejection || app.configError || app.notice || app.alert ? 1 : .5
+                    visible: !win.compact || engine.rejection !== "" || app.configError !== "" || app.notice !== "" || app.alert
                     horizontalAlignment: Text.AlignRight
                     Layout.fillWidth: true
                 }
@@ -692,6 +704,8 @@ Item {
                     }
                 }
                 GlyphButton { glyph: app.locked ? "lock" : "follow"; selected: app.locked; enabled: !!app.state; onClicked: app.toggleLock() }
+                // Save the station on screen as home; away once it is the home.
+                Control { text: win.compact ? "⌂" : "⌂ HOME"; visible: !!app.state && app.siteId !== "" && app.siteId !== app.homeSite; onClicked: app.setHome() }
                 Item { Layout.fillWidth: true }
                 // The treatment chip (DESIGN.md, treatment control): one
                 // low-emphasis control naming the treatment; click opens the

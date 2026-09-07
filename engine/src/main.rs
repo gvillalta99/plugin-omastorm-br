@@ -38,7 +38,7 @@ use tokio::{
         mpsc::{self, Receiver, Sender},
     },
     task::{JoinHandle, spawn_blocking},
-    time::{MissedTickBehavior, interval, timeout, timeout_at},
+    time::{interval, sleep, timeout, timeout_at},
 };
 
 /// Development only: the path of an archived Level II volume to decode and
@@ -62,7 +62,9 @@ const QUEUE: usize = 128;
 const STALE_AFTER: Duration = Duration::from_secs(600);
 const UNAVAILABLE_AFTER: Duration = Duration::from_secs(1800);
 /// Playback advances one frame per tick and loops (DESIGN.md, timeline).
-const PLAY_INTERVAL: Duration = Duration::from_millis(250);
+const PLAY_LOOP: Duration = Duration::from_secs(10);
+const PLAY_STEP_MIN: Duration = Duration::from_millis(250);
+const PLAY_STEP_MAX: Duration = Duration::from_millis(1000);
 /// Following hands off when a pan settles with another station closer than
 /// this fraction of the current one's distance to the view centre, and
 /// closer by at least `HANDOFF_MARGIN_KM` (DESIGN.md, site navigation).
@@ -223,6 +225,16 @@ impl Timeline {
     /// oldest, and the caller shows it.
     fn complete(&mut self, entry: Entry) -> bool {
         self.partial = None;
+        self.insert(entry)
+    }
+    /// How many complete frames the loop has.
+    fn complete_count(&self) -> usize {
+        self.stored.len()
+    }
+    /// A complete frame from an earlier volume (a backfill) or the live
+    /// one, in time order; the sweep in progress is untouched. True when the
+    /// pinned frame fell off the ring.
+    fn insert(&mut self, entry: Entry) -> bool {
         self.stored.retain(|e| e.id != entry.id);
         let at = self
             .stored
@@ -602,13 +614,18 @@ impl Shared {
             task.abort();
         }
         self.frame_ms = frame_ms;
+        let cached: Vec<i64> = listed.iter().map(|e| e.start_ms).collect();
         self.timeline = Timeline::new(listed);
         self.pending = None;
         self.state.playing = false;
         self.state.site.id = station.id.clone();
         self.state.source = Source::Live;
         self.state.connection.status = ConnectionStatus::Loading;
-        self.live = Some(tokio::spawn(live::poll(station.id, self.events.clone())));
+        self.live = Some(tokio::spawn(live::poll(
+            station.id,
+            self.events.clone(),
+            cached,
+        )));
         (true, None)
     }
     /// A pan settled with the map centred at `lat`, `lon`. While following and
@@ -677,6 +694,21 @@ impl Shared {
             } else {
                 Ok(())
             }
+        };
+        self.broadcast();
+        shown
+    }
+    /// An earlier volume's frame joined the catalog: it takes its place in
+    /// the timeline without touching the frame on screen, unless the pin
+    /// fell off the ring. The age keeps following the newest frame.
+    fn backfilled(&mut self, entry: Entry) -> io::Result<()> {
+        if self.frame_ms.is_none_or(|ms| entry.start_ms > ms) {
+            self.frame_ms = Some(entry.start_ms);
+        }
+        let shown = if self.timeline.insert(entry) {
+            self.show_position(0)
+        } else {
+            Ok(())
         };
         self.broadcast();
         shown
@@ -936,6 +968,57 @@ async fn live_events(shared: Arc<Mutex<Shared>>, mut events: Receiver<live::Even
                     Err(e) => eprintln!("Live frame: {e}"),
                 }
             }
+            live::Event::Backfill {
+                site,
+                sweep,
+                provenance,
+            } => {
+                let (frame, catalog) = {
+                    let shared = shared.lock().unwrap();
+                    if shared.state.site.id != site || shared.state.source != Source::Live {
+                        continue;
+                    }
+                    let Some(station) = shared.sites.iter().find(|s| s.id == site) else {
+                        continue;
+                    };
+                    (
+                        live_frame(&shared.template, station, &sweep, true),
+                        shared.catalog.clone(),
+                    )
+                };
+                let stored = spawn_blocking(move || -> io::Result<Entry> {
+                    let (texture, lut) = encode(&sweep, &frame)?;
+                    catalog.store(&site, &frame, sweep.start_ms, &texture, &lut, &provenance)?;
+                    eprintln!(
+                        "{} Live {site}: backfilled {} from {}",
+                        iso(now_ms()),
+                        frame.scan_time,
+                        provenance
+                    );
+                    Ok(Entry {
+                        id: frame.id,
+                        scan_time: frame.scan_time,
+                        start_ms: sweep.start_ms,
+                    })
+                })
+                .await
+                .map_err(io::Error::other)
+                .and_then(|r| r);
+                match stored {
+                    Ok(entry) => {
+                        let mut shared = shared.lock().unwrap();
+                        if !entry.id.starts_with(&shared.state.site.id)
+                            || shared.state.source != Source::Live
+                        {
+                            continue;
+                        }
+                        if let Err(e) = shared.backfilled(entry) {
+                            eprintln!("Backfill frame: {e}");
+                        }
+                    }
+                    Err(e) => eprintln!("Backfill frame: {e}"),
+                }
+            }
             live::Event::Offline { site, reason } => {
                 report(&shared, &site, &reason, ConnectionStatus::Offline);
             }
@@ -964,13 +1047,17 @@ fn report(shared: &Mutex<Shared>, site: &str, reason: &str, condition: Connectio
 async fn player(shared: Arc<Mutex<Shared>>, wake: Arc<Notify>) {
     loop {
         wake.notified().await;
-        let mut tick = interval(PLAY_INTERVAL);
-        tick.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        // The first tick completes at once; the first frame change waits a
-        // full interval.
-        tick.tick().await;
         loop {
-            tick.tick().await;
+            // The step is re-judged every frame, so a backfill landing
+            // mid-loop slows the loop rather than shortening it.
+            let step = {
+                let shared = shared.lock().unwrap();
+                if !shared.state.playing {
+                    break;
+                }
+                play_step(shared.timeline.complete_count())
+            };
+            sleep(step).await;
             let mut shared = shared.lock().unwrap();
             if !shared.state.playing {
                 break;
@@ -978,6 +1065,13 @@ async fn player(shared: Arc<Mutex<Shared>>, wake: Arc<Notify>) {
             shared.tick();
         }
     }
+}
+/// Playback loops the complete frames over about `PLAY_LOOP` however many
+/// there are, within `PLAY_STEP_MIN` to `PLAY_STEP_MAX` per frame: a fresh
+/// station's dozen backfilled frames turn slowly enough to read, a full
+/// ring turns at four frames a second.
+fn play_step(frames: usize) -> Duration {
+    (PLAY_LOOP / frames.max(1) as u32).clamp(PLAY_STEP_MIN, PLAY_STEP_MAX)
 }
 /// Files under `tex/` that no `state` references, keyed by when each was first
 /// seen unreferenced. Time is measured from observation rather than from file
@@ -1680,6 +1774,28 @@ mod tests {
         assert_eq!(timeline.id_at(4), Some(entry(6).id.as_str()));
     }
 
+    #[test]
+    fn playback_paces_the_loop_to_ten_seconds() {
+        assert_eq!(play_step(1).as_millis(), 1000);
+        assert_eq!(play_step(12).as_millis(), 833);
+        assert_eq!(play_step(36).as_millis(), 277);
+        assert_eq!(play_step(60).as_millis(), 250);
+    }
+    #[test]
+    fn a_backfilled_frame_keeps_the_sweep_in_progress() {
+        let mut timeline = Timeline::new(vec![entry(10)]);
+        timeline.begin(entry(20));
+        assert!(!timeline.insert(entry(5)));
+        assert_eq!(
+            ids(&timeline),
+            vec![
+                (entry(5).id, FrameStatus::Complete),
+                (entry(10).id, FrameStatus::Complete),
+                (entry(20).id, FrameStatus::Partial),
+            ]
+        );
+        assert!(timeline.following());
+    }
     #[test]
     fn playback_loops_over_complete_frames() {
         let mut timeline = Timeline::new(vec![entry(0)]);

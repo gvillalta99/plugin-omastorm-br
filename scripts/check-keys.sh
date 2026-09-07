@@ -91,6 +91,16 @@ call run search
 expect 'The search key opens the picker' true "$(quickshell ipc --pid "$pid" call picker status | grep -o '"open":[a-z]*' | cut -d: -f2)"
 quickshell ipc --pid "$pid" call picker close
 
+# Shift+H saves the station on screen as home_site, above the [keys] table,
+# and the header follows the file through the watch.
+shown=$(field site)
+call run home
+for attempt in {1..50}; do grep -q "^home_site = \"$shown\"$" "$check_dir/config.toml" && break; sleep .1; done
+grep -q "^home_site = \"$shown\"$" "$check_dir/config.toml" || fail "Shift+H did not save home_site = \"$shown\"" "$(cat "$check_dir/config.toml")"
+[[ $(grep -n "^home_site\|^\[keys\]" "$check_dir/config.toml" | head -1) == *home_site* ]] || fail "home_site landed inside a table"
+until_field homeSource config
+expect 'The saved home is the station on screen' "$shown" "$(field home)"
+
 # The fix applies through the file watch: no report, the new key in force,
 # and a configured home_site outranking the location.
 cat > "$check_dir/config.toml" <<'TOML'

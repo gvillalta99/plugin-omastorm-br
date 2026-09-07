@@ -338,6 +338,23 @@ reviewed with Wes the same day. Everything below is decided.
   scan time; standalone readings carry the zone abbreviation). The wire
   stays UTC.
 
+### Backfill and home as built (2026-09-07, packaging)
+
+- On joining a station the poller, three seconds after the live frame is
+  up (so a hand-off passed while panning costs nothing), fetches the lowest
+  cut of the twelve previous volumes newest first, one Start chunk plus the
+  few chunks that carry the cut, skipping volumes whose start time the
+  catalog already holds; each lands as `Event::Backfill`, joins the catalog
+  and the timeline in time order, and never takes the screen. The task dies
+  with the poller. Playback paces the loop to about ten seconds whatever
+  the count, 250 ms to 1 s per frame, re-judged every step.
+- `Shift+H` and a HOME control save the station on screen as `home_site`
+  in config.toml, replacing the top-level line or adding it above the
+  first table and touching nothing else; the file watch applies it and the
+  status slot confirms for three seconds. The control hides while the
+  station is already the home. Without a saved home the home is still the
+  station nearest Omarchy's weather location.
+
 ### User-facing README as built (2026-09-07, phase 5 session 6)
 
 - GitHub README is the install and use document, in the Omamail shape:

@@ -45,8 +45,35 @@ QtObject {
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: { root.values = Toml.parse(text()); root.configRead = true; }
-        onLoadFailed: { root.values = ({}); root.configRead = true; }
+        onLoaded: { root.raw = text(); root.values = Toml.parse(root.raw); root.configRead = true; }
+        onLoadFailed: { root.raw = ""; root.values = ({}); root.configRead = true; }
+    }
+    // The file as last read, so a save keeps every other line.
+    property string raw: ""
+    property string pendingText: ""
+    // Save `id` as home_site: the top-level line is replaced in place, or
+    // added above the first table; nothing else in the file changes. The
+    // directory may not exist yet, so the write follows its creation, and
+    // the watch above reloads the result like any other edit.
+    function setHome(id) {
+        var lines = raw.length ? raw.replace(/\n$/, "").split("\n") : [];
+        var line = 'home_site = "' + id + '"', out = [], done = false, inTable = false;
+        for (var l of lines) {
+            if (/^\s*\[/.test(l)) inTable = true;
+            if (!done && !inTable && /^\s*home_site\s*=/.test(l)) { out.push(line); done = true; }
+            else out.push(l);
+        }
+        if (!done) {
+            var at = out.findIndex(l => /^\s*\[/.test(l));
+            if (at < 0) out.push(line); else out.splice(at, 0, line);
+        }
+        pendingText = out.join("\n") + "\n";
+        mkdir.running = true;
+    }
+    property Process mkdir: Process {
+        command: ["mkdir", "-p", root.path.substring(0, root.path.lastIndexOf("/"))]
+        // The view does not report its own write, so the values follow at once.
+        onExited: { file.setText(root.pendingText); root.raw = root.pendingText; root.values = Toml.parse(root.raw); }
     }
     property FileView locationFile: FileView {
         path: root.locationPath

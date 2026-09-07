@@ -67,7 +67,8 @@ the radar or press Enter for the window; it opens on the same station and
 frame. Closing the window returns to home.
 
 In the window, drag to pan and scroll to zoom. The map follows the nearest
-station as you pan unless you lock it. The status slot shows the age of the
+station as you pan unless you lock it. A station you arrive at fetches its last
+dozen scans, so there is a loop to play within a few seconds. The status slot shows the age of the
 frame on screen: LIVE, STALE after ten minutes, UNAVAILABLE or OFFLINE when the
 feed cannot be reached, with cached frames kept.
 
@@ -79,7 +80,8 @@ feed cannot be reached, with cached frames kept.
 | `/` or `s` | Search sites |
 | `n` | Nearest site |
 | `Shift+L` | Lock the station |
-| `Space` | Play or pause the last hour |
+| `Shift+H` | Save the station as home |
+| `Space` | Loop the frames |
 | `[` `]` | Step a frame |
 | `Home` `End` | Oldest or newest frame |
 | `1` `2` `3` | Pixels, Glyphs, Stipple |
@@ -93,7 +95,8 @@ are hidden by default and the legend says so; `w` shows them.
 ## Configuration
 
 `~/.config/omastorm/config.toml` is optional. Without `home_site` the home is
-the station nearest Omarchy's weather location.
+the station nearest Omarchy's weather location. `Shift+H`, or the HOME
+button, saves the station on screen as `home_site`.
 
 ```toml
 home_site = "KTLX"   # a station id; omit to use Omarchy's weather location

@@ -17,7 +17,8 @@
 
 use crate::sweep::Sweep;
 use nexrad_data::aws::realtime::{
-    Chunk, ChunkIdentifier, ChunkIterator, DownloadedChunk, download_chunk, list_chunks_in_volume,
+    Chunk, ChunkIdentifier, ChunkIterator, DownloadedChunk, VolumeIndex, download_chunk,
+    list_chunks_in_volume,
 };
 use nexrad_data::result::{Error, aws::AWSError};
 use nexrad_data::volume::Record;
@@ -53,9 +54,25 @@ const RESTART_AFTER: u32 = 4;
 /// so no chunk can be mapped to a cut: the lowest cut of a super-resolution
 /// volume spans about four.
 const BLIND_REPLAY: usize = 12;
+/// Volumes before the current one fetched on joining a station, newest
+/// first, so a fresh station has a loop to play rather than one frame. The
+/// fetch starts after `BACKFILL_DELAY`, so a hand-off passed while panning
+/// costs nothing, and ends with the poller. The bucket rotates volume
+/// numbers 1–999 and keeps a few hours; a volume's lowest cut is within
+/// its first `BACKFILL_CHUNKS` chunks or is given up on.
+const BACKFILL_VOLUMES: usize = 12;
+const BACKFILL_DELAY: Duration = Duration::from_secs(3);
+const BACKFILL_CHUNKS: usize = 16;
 
 /// What the poller reports to `main.rs`.
 pub enum Event {
+    /// An earlier volume's complete lowest cut, fetched on joining: the
+    /// timeline gains history while the frame on screen stands.
+    Backfill {
+        site: String,
+        sweep: Sweep,
+        provenance: String,
+    },
     /// The lowest cut of the current volume grew or completed; `provenance`
     /// names the bucket, volume, and chunks it came from.
     Sweep {
@@ -90,6 +107,10 @@ pub struct Update {
 }
 
 impl Assembler {
+    /// The cut's first collection time, once a radial is in.
+    pub fn start_ms(&self) -> Option<i64> {
+        self.radials.first().map(Radial::collection_timestamp)
+    }
     /// Feed one chunk's radials. A Start chunk, or any chunk of a volume
     /// other than the current one (a late poll that missed the Start),
     /// begins a new volume and discards the previous cut, finished or not.
@@ -274,9 +295,110 @@ async fn earlier_chunks(
     chunks
 }
 
+/// The volume `back` places before `current` in the bucket's 1–999 rotation.
+fn previous_volume(current: VolumeIndex, back: usize) -> VolumeIndex {
+    let n = current.as_number();
+    let back = back % 999;
+    VolumeIndex::new(if n > back { n - back } else { n + 999 - back })
+}
+
+/// Fetch the lowest cut of the `BACKFILL_VOLUMES` volumes before `current`,
+/// newest first, and report each complete one as `Event::Backfill`. A
+/// volume whose start time is already catalogued (`cached`) costs one
+/// chunk; a volume with no Start chunk in the listing is skipped; a listing
+/// failure ends the backfill, since the bucket is not answering.
+async fn backfill(site: String, events: Sender<Event>, current: VolumeIndex, cached: Vec<i64>) {
+    sleep(BACKFILL_DELAY).await;
+    let mut fetched = 0;
+    for back in 1..=BACKFILL_VOLUMES {
+        let volume = previous_volume(current, back);
+        let mut ids = match timeout(CALL_TIMEOUT, list_chunks_in_volume(&site, volume, 100)).await {
+            Ok(Ok(ids)) => ids,
+            Ok(Err(e)) => {
+                eprintln!(
+                    "Live {site}: backfill listing volume {}: {e}",
+                    volume.as_number()
+                );
+                return;
+            }
+            Err(_) => {
+                eprintln!(
+                    "Live {site}: backfill listing volume {} timed out",
+                    volume.as_number()
+                );
+                return;
+            }
+        };
+        ids.sort_by_key(ChunkIdentifier::sequence);
+        if ids.first().map(ChunkIdentifier::sequence) != Some(1) {
+            continue;
+        }
+        let name = format!("{site}/{:03}", volume.as_number());
+        let mut assembler = Assembler::default();
+        for id in ids.iter().take(BACKFILL_CHUNKS) {
+            let (identifier, chunk) = match timeout(CALL_TIMEOUT, download_chunk(&site, id)).await {
+                Ok(Ok(got)) => got,
+                Ok(Err(e)) => {
+                    eprintln!("Live {site}: backfill {}: {e}", id.name());
+                    break;
+                }
+                Err(_) => {
+                    eprintln!("Live {site}: backfill {} timed out", id.name());
+                    break;
+                }
+            };
+            let radials = match radials_of(&chunk) {
+                Ok(radials) => radials,
+                Err(e) => {
+                    eprintln!("Live {site}: backfill {}: {e}", id.name());
+                    break;
+                }
+            };
+            let starts = matches!(chunk, Chunk::Start(_));
+            let update = match assembler.feed(starts, &name, identifier.name(), radials) {
+                Ok(update) => update,
+                Err(e) => {
+                    eprintln!("Live {site}: backfill {}: {e}", id.name());
+                    break;
+                }
+            };
+            if assembler.start_ms().is_some_and(|ms| cached.contains(&ms)) {
+                break;
+            }
+            if let Some(update) = update.filter(|u| u.complete) {
+                let sent = events
+                    .send(Event::Backfill {
+                        site: site.clone(),
+                        sweep: update.sweep,
+                        provenance: update.provenance,
+                    })
+                    .await;
+                if sent.is_err() {
+                    return;
+                }
+                fetched += 1;
+                break;
+            }
+        }
+    }
+    eprintln!("Live {site}: backfilled {fetched} earlier volumes");
+}
+
+/// Aborts its task when dropped, so a poller replaced mid-backfill takes
+/// the downloads with it.
+struct AbortOnDrop(tokio::task::JoinHandle<()>);
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 /// Poll `site` until the task is aborted or the event channel closes.
-pub async fn poll(site: String, events: Sender<Event>) {
+/// `cached` holds the start times of the frames already catalogued for the
+/// station, so the backfill does not fetch them again.
+pub async fn poll(site: String, events: Sender<Event>, cached: Vec<i64>) {
     let mut back_off = BACK_OFF;
+    let mut backfilling: Option<AbortOnDrop> = None;
     loop {
         let init = match timeout(START_TIMEOUT, ChunkIterator::start(&site)).await {
             Ok(Ok(init)) => init,
@@ -332,6 +454,14 @@ pub async fn poll(site: String, events: Sender<Event>) {
             newest.identifier.name(),
             replay.len()
         );
+        if backfilling.is_none() {
+            backfilling = Some(AbortOnDrop(tokio::spawn(backfill(
+                site.clone(),
+                events.clone(),
+                *newest.identifier.volume(),
+                cached.clone(),
+            ))));
+        }
         replay.push(newest);
         let mut previous_volume = None;
         for chunk in &replay {
@@ -408,6 +538,15 @@ mod tests {
     use crate::sweep::lowest_reflectivity;
     use nexrad_data::volume::File;
     use std::fs;
+
+    #[test]
+    fn earlier_volumes_wrap_through_the_rotation() {
+        assert_eq!(previous_volume(VolumeIndex::new(598), 1).as_number(), 597);
+        assert_eq!(previous_volume(VolumeIndex::new(3), 5).as_number(), 997);
+        assert_eq!(previous_volume(VolumeIndex::new(5), 5).as_number(), 999);
+        assert_eq!(previous_volume(VolumeIndex::new(1), 1).as_number(), 999);
+        assert_eq!(previous_volume(VolumeIndex::new(999), 12).as_number(), 987);
+    }
 
     const FIXTURE: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
