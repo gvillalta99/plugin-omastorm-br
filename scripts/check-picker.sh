@@ -24,7 +24,7 @@ for attempt in {1..50}; do [[ $(call matches) != '[]' ]] && break; sleep .1; don
 # The fixture's home view centres north-west of KTLX: KTLX first, the Norman pair next.
 m=$(call matches)
 [[ $m == '["KTLX","K'* && $m == *KOUN* && $m == *KCRI* ]] || fail "Empty query did not list the nearest stations first: $m"
-expect 'Empty query counts the whole table' '{"open":true,"query":"","selected":0,"total":163}' "$(call status)"
+expect 'Empty query counts the whole table' '{"open":true,"query":"","selected":0,"total":163,"focused":true}' "$(call status)"
 call open tlx
 expect 'ID without its leading letter ranks first' '"KTLX"' "$(call matches | cut -d, -f1 | tr -d '[]')"
 call open tulsa
@@ -35,9 +35,9 @@ m=$(call matches)
 [[ $m == '["KOKX","KTLX",'* ]] || fail "Tier order for 'ok' was wrong: $m"
 call open zzzq
 expect 'A hopeless query shows nothing' '[]' "$(call matches)"
-expect 'A hopeless query counts nothing' '{"open":true,"query":"zzzq","selected":0,"total":0}' "$(call status)"
+expect 'A hopeless query counts nothing' '{"open":true,"query":"zzzq","selected":0,"total":0,"focused":true}' "$(call status)"
 call close
-expect 'Close clears the picker' '{"open":false,"query":"","selected":0,"total":0}' "$(call status)"
+expect 'Close clears the picker' '{"open":false,"query":"","selected":0,"total":0,"focused":false}' "$(call status)"
 call open ok
 call move 1; call move 5
 expect 'Down stops at the last of four rows' '3' "$(call status | grep -o '"selected":[0-9]*' | cut -d: -f2)"
@@ -48,6 +48,8 @@ first=$(call matches | cut -d, -f1 | tr -d '[]"')
 expect 'Norman finds KOUN' KOUN "$first"
 call accept
 expect 'Enter closes the picker' 'false' "$(call status | grep -o '"open":[a-z]*' | cut -d: -f2)"
+# The field must let go of the keyboard, or the next `/` types into it instead of reopening.
+expect 'Enter hands the keyboard back' 'false' "$(call status | grep -o '"focused":[a-z]*' | cut -d: -f2)"
 sock="$XDG_RUNTIME_DIR/omastorm/engine.sock"
 for attempt in {1..50}; do
   site=$(timeout 2 socat -t0.2 - "UNIX-CONNECT:$sock" < /dev/null | sed -n 2p | grep -o '"site":{[^}]*}' || true)

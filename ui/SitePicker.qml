@@ -20,6 +20,8 @@ Item {
     property real cardTop: 20         // where the card's top edge sits
     property bool open: false
     property alias query: field.text
+    // Whether the field holds the keyboard; closed, it must not.
+    readonly property bool fieldFocused: field.activeFocus
     property int selected: 0
     readonly property int limit: 4
     component Word: Text {
@@ -39,7 +41,9 @@ Item {
         open = true;
         Qt.callLater(() => { field.cursorPosition = field.length; field.forceActiveFocus(); });
     }
-    function close() { open = false; field.text = ""; selected = 0; }
+    // Closing hands the keyboard back: a hidden field that kept active focus
+    // would swallow the next `/` as text instead of the search shortcut.
+    function close() { open = false; field.text = ""; selected = 0; field.focus = false; }
     function accept() {
         if (!open || !rows.length) return;
         var s = rows[Math.min(selected, rows.length - 1)].site;

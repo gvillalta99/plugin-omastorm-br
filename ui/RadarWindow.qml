@@ -258,7 +258,7 @@ Item {
         function close(): void { picker.close(); }
         function move(delta: int): void { picker.move(delta); }
         function matches(): string { return JSON.stringify(picker.rows.map(r => r.site.id)); }
-        function status(): string { return JSON.stringify({open: picker.open, query: picker.query, selected: picker.selected, total: picker.ranked.total}); }
+        function status(): string { return JSON.stringify({open: picker.open, query: picker.query, selected: picker.selected, total: picker.ranked.total, focused: picker.fieldFocused}); }
     }
     readonly property var theme: session ? session.theme.snapshot : themeInputs.snapshot
     Theme { id: themeInputs; registerIpc: !app.session }
@@ -284,7 +284,7 @@ Item {
     Connections { target: Quickshell; function onLastWindowClosed() { if (!app.session) Qt.quit(); } }
     FloatingWindow {
         id: win
-        title: app.state ? "Omastorm · " + app.state.source + " radar prototype" : "Omastorm"
+        title: "Omastorm"
         visible: app.opened
         onVisibleChanged: if (!visible && app.opened) app.dismiss()
         implicitWidth: Number(Quickshell.env("OMASTORM_WIDTH")) || 960
