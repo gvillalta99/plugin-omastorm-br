@@ -58,7 +58,7 @@ QtObject {
         target: session.engine
         function onStateChanged() {
             if (!session.engine.state) session.initialized = false;
-            else session.initialize();
+            else { session.startupError = ""; session.initialize(); }
         }
     }
     property Connections configEvents: Connections {
@@ -68,15 +68,28 @@ QtObject {
         function onTreatmentChanged() { session.applyTreatment(); }
         function onWeakFloorChanged() { session.applyTreatment(); }
     }
-    // argv, never shell interpolation: checkout paths may contain spaces.
-    // Quickshell's process cwd is qrc:/qs-blackhole; bash refuses to start there.
-    property Process bootstrap: Process {
-        readonly property string root: Quickshell.env("OMASTORM_ROOT") || Quickshell.env("HOME") + "/.config/omarchy/plugins/com.omastorm.radar"
-        command: ["bash", root + "/run.sh", "--ensure"]
-        workingDirectory: Quickshell.env("HOME")
-        running: true
-        stderr: StdioCollector { onStreamFinished: session.startupError = text.trim() }
-        onExited: (code, status) => { if (code === 0) session.startupError = ""; }
+    // The engine bootstrap (run.sh --ensure: install the pinned engine if
+    // needed, start or replace the daemon) runs detached, so a plugin reload
+    // mid-install cannot kill it: `omarchy plugin add` clones many files and
+    // the registry reloads the plugin on each one. While the engine stays
+    // unreachable it is retried every 20 s, so a killed or failed attempt
+    // recovers on its own. argv, never shell text, since checkout paths may
+    // contain spaces; bash will not start in Quickshell's cwd
+    // (qrc:/qs-blackhole), so env -C moves it home. Its stderr lands in
+    // bootstrap.log beside the socket, and the popover shows the last line
+    // while there is no engine.
+    readonly property string root: Quickshell.env("OMASTORM_ROOT") || Quickshell.env("HOME") + "/.config/omarchy/plugins/com.omastorm.radar"
+    readonly property string bootstrapLog: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/omastorm/bootstrap.log"
+    function bootstrap() {
+        Quickshell.execDetached(["env", "-C", Quickshell.env("HOME"), "OMASTORM_BOOTSTRAP_LOG=" + bootstrapLog, "bash", root + "/run.sh", "--ensure"]);
     }
-    Component.onCompleted: applyTreatment()
+    property Timer bootstrapRetry: Timer { interval: 20000; repeat: true; running: !session.engine.state; onTriggered: session.bootstrap() }
+    property FileView bootstrapLogFile: FileView {
+        path: session.bootstrapLog
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: { var lines = text().trim().split("\n"); session.startupError = session.engine.state ? "" : lines[lines.length - 1]; }
+    }
+    Component.onCompleted: { applyTreatment(); bootstrap(); }
 }

@@ -7,6 +7,11 @@ export OMASTORM_ROOT="$PWD"
 # fetches once, verifies the committed sha256, and installs under
 # $XDG_DATA_HOME/omastorm/bin (DESIGN.md, distribution).
 if [[ ${1:-} == --ensure ]]; then
+  # The plugin bootstrap runs detached; its stderr goes to the log it names.
+  if [[ -n ${OMASTORM_BOOTSTRAP_LOG:-} ]]; then
+    mkdir -p "$(dirname "$OMASTORM_BOOTSTRAP_LOG")"
+    exec 2> "$OMASTORM_BOOTSTRAP_LOG"
+  fi
   if [[ -x target/debug/omastorm-engine ]]; then
     exec target/debug/omastorm-engine ensure
   fi
