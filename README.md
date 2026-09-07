@@ -2,7 +2,10 @@
 
 Live NEXRAD radar for the Omarchy desktop. Beta.
 
-[![Omastorm in dark and light themes](https://github.com/wesleygrimes/omastorm/releases/download/v0.1.0/omastorm-preview.gif)](https://github.com/wesleygrimes/omastorm/releases/download/v0.1.0/omastorm-demo.mp4)
+[![Omastorm, one live take on the Jacksonville radar](https://github.com/wesleygrimes/omastorm/releases/download/v0.1.0/omastorm-preview.gif)](https://github.com/wesleygrimes/omastorm/releases/download/v0.1.0/omastorm-demo.mp4)
+
+One live take, 2026-09-07, on KJAX: the loop, pan and zoom, the three
+treatments, weak returns, the picker, and the keys.
 
 A radar that lives in your bar. The popover shows the station nearest you with
 the actual scan time. Expand it for the full window: every NEXRAD site in the

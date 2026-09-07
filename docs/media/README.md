@@ -2,30 +2,28 @@
 
 The pictures the README shows are not in the repository. The plugin is a full
 clone of this repository, so media travels as assets on the plugin's GitHub
-Release (`v<version>`), and the README links to them by URL.
+Release (`v0.1.0`), and the README links to them by URL.
 
 Regenerate from a working desktop OpenGL session:
 
 ```sh
 bash scripts/capture-readme.sh   # window-live.png, popover.png (live KTLX)
-bash scripts/capture-demo.sh     # omastorm-demo.mp4, omastorm-preview.gif, six treatment stills
-bash scripts/capture-demo-live.sh   # omastorm-live-demo.mp4: one live take on KJAX, 1280×720, for the announcement
+bash scripts/capture-demo.sh     # omastorm-demo.mp4 and omastorm-preview.gif (live KJAX; SITE=KXXX for another)
 ```
 
 Both write into this directory, which is ignored except for this file. They
-use isolated daemons and example theme files and change no desktop or system
-configuration. FFmpeg is required; the demo also needs Ruby for its temporary
-harness. The video is encoded at 30 fps and is not a latency measurement.
+use isolated daemons and change no desktop or system configuration. FFmpeg is
+required; the demo also needs Ruby for its temporary harness. Frames are
+grabbed as the scene settles, so the video runs a little faster than real
+time and is not a latency measurement.
 
-- `omastorm-demo.mp4`: 24 s, H.264, no audio. One continuous camera path per
-  theme (dark 0–12 s, light 12–24 s), Glyphs then Pixels then Stipple.
-- `omastorm-preview.gif`: a short Glyphs preview cut from the video.
-- `{dark,light}-{glyphs,pixels,stipple}.png`: same-camera stills at the home
-  view.
+- `omastorm-demo.mp4`: one live take, about 37 s, 1280×720, H.264, no audio:
+  the home view, the loop, a pan and zoom to the coast, the three
+  treatments, weak returns, the picker switching station, the keys sheet.
+- `omastorm-preview.gif`: the home view and the zoom, cut from the video.
 - `window-live.png`, `popover.png`: live KTLX with the actual scan time.
 
-The demo and stills are **archived KTLX, 2013-05-20**, labeled ARCHIVED in the
-window. Publish with `gh release upload v<version> docs/media/*` and keep the
+Publish with `gh release upload v0.1.0 --clobber docs/media/*` and keep the
 README URLs pointing at that tag.
 
 Radar: NOAA NEXRAD. Map: © OpenStreetMap contributors
