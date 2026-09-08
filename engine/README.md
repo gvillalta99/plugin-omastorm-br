@@ -1,18 +1,17 @@
 # Engine
 
-From a fresh checkout, run `bash scripts/setup-fixture.sh` once to download
-the Natural Earth files the binary embeds and the archived Level II volume the
-tests and `OMASTORM_ARCHIVE` read (`data/raw/`
-is ignored; `build.rs` stops with a message naming the script when one is
-missing), then explicitly fetch/build dependencies with `bash scripts/cargo.sh
-build --locked`. Run `bash run.sh` thereafter; launch builds offline, ensures a
-shared daemon exists, and starts Quickshell. Rust 1.89+ is required for a
-checkout build. Plugin installs use `scripts/install-engine.sh` and the pin
-in `engine/release.pin` instead of Rust; `bash scripts/build-engine-release.sh`
-produces the x86_64 asset under `target/dist/` and does not publish it
-(the pinned release holds the current file).
-`scripts/cargo.sh` uses Cargo on PATH or, if present, an isolated
-`.tools/{cargo,rustup}` toolchain. No Python runs at launch.
+From a fresh checkout, `mise install` gets the pinned Rust toolchain and
+`mise setup` downloads the Natural Earth files the binary embeds and the
+archived Level II volume the tests and `OMASTORM_ARCHIVE` read (`data/raw/`
+is ignored; `build.rs` stops with a message naming `scripts/setup-fixture.sh`
+when one is missing), fetches crates, and builds the debug engine. Run
+`mise start` thereafter; launch builds offline, ensures a shared daemon
+exists, and starts Quickshell. Rust 1.89 is the minimum; `mise.toml` pins the
+version a checkout uses. Plugin installs use `scripts/install-engine.sh` and
+the pin in `engine/release.pin` instead of Rust; `mise build-release` produces
+the x86_64 asset under `target/dist/` and does not publish it (the pinned
+release holds the current file). `scripts/cargo.sh` uses Cargo on PATH, which
+mise provides. No Python runs at launch.
 
 The engine embeds `data/fixture.json` and `data/sites.json` and nothing
 archived. `fixture.json` is the frame template (product, palette, bounds,
@@ -219,10 +218,10 @@ Source URL, date, and caveats are embedded and exposed with hello.
 Checks (socket and GPU checks need desktop access outside the sandbox):
 
 ```sh
-bash scripts/cargo.sh test --offline --locked
+mise test                                    # unit and socket tests
+mise lint                                    # rustfmt check, clippy, shellcheck
+mise check                                   # everything below plus the other UI checks, against a scratch daemon
 bash scripts/cargo.sh test --offline --locked -- --ignored rendering   # GPU, needs Quickshell
-bash scripts/cargo.sh clippy --offline --locked --all-targets -- -D warnings
-bash scripts/cargo.sh fmt --check
 bash scripts/check-engine-ui.sh
 bash scripts/check-map-tiles.sh              # delayed zoom tiles and ranked labels
 bash scripts/check-map-sites.sh              # site overlay geometry, layout, and pan
@@ -334,3 +333,35 @@ The UI check verifies socket metadata, invalid JSON, a rejection that sits
 beside state until the client's next command (including one answered by the
 real daemon), the azimuth lookup and tile path rules, a `tiles_needed` round
 trip, and rejecting an unknown protocol version.
+
+## Cutting an engine release
+
+Releases on the repository are immutable: once published, the tag and the
+assets cannot be changed or deleted, and a mistake burns that version number.
+`mise release` does every step below except the version bump and the final
+commit, and refuses to start unless the preconditions hold.
+
+1. Bump `version` in `engine/Cargo.toml`. Run `mise build` so `Cargo.lock`
+   follows, then commit both and push to `main`. The release names the commit
+   everyone has, so `main` must be clean and even with `origin/main`.
+2. `mise release --dry-run`. This builds the optimized, stripped candidate
+   under `target/dist/`, starts it under a scratch runtime, and requires its
+   hello to report the new version and the protocol version `ui/Engine.qml`
+   accepts. It prints the tag, the sha256, and the release notes (the commits
+   since the pinned release that touch `engine/src`, `build.rs`, `tests`,
+   `engine/Cargo.toml`, or `Cargo.lock`), then stops.
+3. `mise release`. Same checks, then it asks. On yes it creates
+   `engine-<version>` as a draft with the binary and `SHA256SUMS`, publishes
+   it, fetches the published asset back from GitHub, and requires it to hash
+   to the candidate. Only then does it write `engine/release.pin`. `--yes`
+   skips the prompt.
+4. `mise check`. The install step installs from the new pin for real and
+   checks the published binary's hash, protocol, and version.
+5. Commit the pin bump (`engine/release.pin` is the only change) and push.
+   Users receive the new engine on their next `omarchy plugin update`.
+
+If the script refuses, the message names the precondition: wrong branch,
+dirty tree, behind or ahead of origin, a version already pinned, tagged, or
+released, or a lock file that disagrees with `Cargo.toml`. If the published
+asset does not hash to the candidate, the pin is not written; bump the version
+and publish again rather than trying to repair the release.

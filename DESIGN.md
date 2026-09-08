@@ -255,8 +255,14 @@ reviewed with Wes the same day. Everything below is decided.
 - `scripts/build-engine-release.sh` builds `--release --locked --offline`
   on `x86_64-unknown-linux-gnu`, copies and strips the binary into
   `target/dist/`, writes `SHA256SUMS`, and with `--write-pin` updates the
-  pin. It does not tag, publish, or push. Release order: publish that
-  exact file as Release `engine-0.1.0`, then the pin may reach origin.
+  pin. It does not tag, publish, or push. Releases on the repo are immutable
+  (enabled 2026-09-08): assets and tag lock at publish, cannot be changed or
+  deleted, and a botched release burns its version. Release order, done by
+  `mise release` (`scripts/release-engine.sh`) from a clean `main` even with
+  origin: build the candidate, require its hello to name this version and the
+  UI's protocol, create `engine-<version>` as a draft with that exact file
+  and `SHA256SUMS`, publish, fetch the published asset back and require it to
+  hash to the candidate, write the pin. Then `mise check` and the pin commit.
 - `scripts/install-engine.sh` installs under
   `$XDG_DATA_HOME/omastorm/bin/omastorm-engine` (default
   `~/.local/share/omastorm/bin`). A dest whose sha256 already matches is
