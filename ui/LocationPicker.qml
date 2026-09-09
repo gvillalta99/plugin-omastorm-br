@@ -82,6 +82,12 @@ Item {
         chosen(row.lat, row.lon, row.label);
     }
     function move(delta) { selected = Math.max(0, Math.min(rows.length - 1, selected + delta)); }
+    function tab(back) {
+        var order = [field, latField, lonField], i = 0;
+        for (; i < order.length; i++) if (order[i].activeFocus) break;
+        if (i >= order.length) i = 0;
+        order[back ? (i + order.length - 1) % order.length : (i + 1) % order.length].forceActiveFocus();
+    }
     function go(lat, lon, name) { close(); chosen(lat, lon, name || ""); }
     onQueryChanged: { selected = 0; search.restart(); }
     Timer {
@@ -167,6 +173,10 @@ Item {
                             else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { picker.accept(); event.accepted = true; }
                             else if (event.key === Qt.Key_Up) { picker.move(-1); event.accepted = true; }
                             else if (event.key === Qt.Key_Down) { picker.move(1); event.accepted = true; }
+                            else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                                picker.tab(event.key === Qt.Key_Backtab || !!(event.modifiers & Qt.ShiftModifier));
+                                event.accepted = true;
+                            }
                             else if (event.key === Qt.Key_U && event.modifiers === Qt.ControlModifier) { field.text = ""; event.accepted = true; }
                         }
                         Rectangle {
@@ -203,6 +213,10 @@ Item {
                         Keys.onPressed: event => {
                             if (event.key === Qt.Key_Escape) { picker.close(); event.accepted = true; }
                             else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { picker.accept(); event.accepted = true; }
+                            else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                                picker.tab(event.key === Qt.Key_Backtab || !!(event.modifiers & Qt.ShiftModifier));
+                                event.accepted = true;
+                            }
                         }
                     }
                 }
@@ -226,6 +240,10 @@ Item {
                         Keys.onPressed: event => {
                             if (event.key === Qt.Key_Escape) { picker.close(); event.accepted = true; }
                             else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { picker.accept(); event.accepted = true; }
+                            else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                                picker.tab(event.key === Qt.Key_Backtab || !!(event.modifiers & Qt.ShiftModifier));
+                                event.accepted = true;
+                            }
                         }
                     }
                 }
@@ -281,6 +299,7 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 14
+                Word { text: "tab fields"; font.pixelSize: 10; opacity: .55; visible: !picker.compact }
                 Word { text: "↑ ↓ move"; font.pixelSize: 10; opacity: .55 }
                 Word { text: "↵ set location"; font.pixelSize: 10; opacity: .55 }
                 Word { text: "esc close"; font.pixelSize: 10; opacity: .55; visible: !picker.compact }
