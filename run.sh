@@ -25,4 +25,33 @@ fi
 # Launch is strictly offline. Fetch build dependencies explicitly during setup.
 bash scripts/cargo.sh build --offline --locked --quiet
 target/debug/omastorm-engine ensure
+# A tty launch names this checkout and which files apply, so a leftover
+# archive daemon or the installed plugin is obvious. Captures are not a tty.
+if [[ -t 1 ]]; then
+  mode=live
+  [[ -n ${OMASTORM_ARCHIVE:-} ]] && mode="archive $OMASTORM_ARCHIVE"
+  config=${OMASTORM_CONFIG:-$HOME/.config/omastorm/config.toml}
+  if [[ -n ${OMASTORM_STATE:-} ]]; then
+    state=$OMASTORM_STATE
+  elif [[ -n ${OMASTORM_CONFIG:-} ]]; then
+    state="(not read; OMASTORM_CONFIG is set)"
+  else
+    state=${XDG_STATE_HOME:-$HOME/.local/state}/omastorm/state.json
+  fi
+  if [[ -n ${OMASTORM_LOCATION:-} ]]; then
+    location=$OMASTORM_LOCATION
+  elif [[ -n ${OMASTORM_CONFIG:-} ]]; then
+    location="(not read; OMASTORM_CONFIG is set)"
+  else
+    location=$HOME/.local/state/omarchy/settings/weather.json
+  fi
+  bar=$(bash scripts/link-plugin.sh --status)
+  printf 'Omastorm %s\n  qml    %s\n  engine %s\n  bar    %s\n  config %s\n  state  %s\n  place  %s\n' \
+    "$PWD" "${OMASTORM_QML:-ui/shell.qml}" "$mode" "$bar" "$config" "$state" "$location"
+fi
+# mise start / restart / onboard restart the Omarchy shell when this checkout
+# is linked, so the bar popover matches. Captures and checks leave it alone.
+if [[ -n ${OMASTORM_RESCAN_PLUGIN:-} ]]; then
+  bash scripts/link-plugin.sh --rescan
+fi
 exec quickshell -p "${OMASTORM_QML:-ui/shell.qml}" "$@"
