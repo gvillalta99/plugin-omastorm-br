@@ -653,7 +653,7 @@ Item {
             }
         }
         Repeater {
-            model: map.siteLabels
+            model: RainViewerService.currentPath !== "" ? [] : map.siteLabels
             Rectangle {
                 required property var modelData
                 x: modelData.x; y: modelData.y

@@ -11,7 +11,7 @@ FocusScope {
     property alias engine: connection
     readonly property var state: connection.state
     readonly property bool useRainViewer: RainViewerService.currentPath !== ""
-    readonly property var scan: state && state.frame ? state.frame : (useRainViewer ? {
+    readonly property var scan: useRainViewer ? {
         id: "RV-" + RainViewerService.currentTime,
         scanTime: new Date(RainViewerService.currentTime * 1000).toISOString(),
         productName: "RainViewer (" + RainViewerService.currentSchemeName + ")",
@@ -20,13 +20,13 @@ FocusScope {
         palette: RainViewerService.currentColors,
         bounds: [-32, 0, 10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 96],
         site: { lat: session.centerLat, lon: session.centerLon, altM: 0 }
-    } : null)
-    readonly property var frames: state && state.timeline && state.timeline.length ? state.timeline : (useRainViewer ? RainViewerService.frames.map(f => ({
+    } : (state && state.frame ? state.frame : null)
+    readonly property var frames: useRainViewer ? RainViewerService.frames.map(f => ({
         id: "RV-" + f.time,
         scanTime: new Date(f.time * 1000).toISOString(),
         start_ms: f.time * 1000,
         status: "complete"
-    })) : [])
+    })) : (state && state.timeline && state.timeline.length ? state.timeline : [])
     readonly property var slots: Timeline.slots(frames)
     readonly property string condition: useRainViewer ? "ok" : (state ? state.source === "archived" ? "archived" : state.connection.status : "offline")
     readonly property color statusColor: condition === "stale" ? theme.yellow
@@ -55,12 +55,12 @@ FocusScope {
     implicitHeight: layout.implicitHeight
     Engine { id: connection }
     function step(delta) {
-        if (state) connection.send({type: "step", delta: delta});
-        else if (useRainViewer) RainViewerService.step(delta);
+        if (useRainViewer) RainViewerService.step(delta);
+        else if (state) connection.send({type: "step", delta: delta});
     }
     function play() {
-        if (state) connection.send({type: state.playing ? "pause" : "play"});
-        else if (useRainViewer) RainViewerService.togglePlay();
+        if (useRainViewer) RainViewerService.togglePlay();
+        else if (state) connection.send({type: state.playing ? "pause" : "play"});
     }
     // Respect the same config keys as the window; Enter always expands.
     Shortcut { id: probe; enabled: false }
@@ -243,7 +243,7 @@ FocusScope {
             Layout.fillWidth: true
             spacing: 6
             Control { text: "‹"; Accessible.name: "Previous frame"; enabled: card.frames.length > 1; onClicked: card.step(-1) }
-            Control { text: card.state && card.state.playing ? "Ⅱ" : "▷"; Accessible.name: "Play or pause"; enabled: card.frames.filter(f => f.status === "complete").length > 1; onClicked: card.play() }
+            Control { text: (card.useRainViewer ? RainViewerService.playing : (card.state && card.state.playing)) ? "Ⅱ" : "▷"; Accessible.name: "Play or pause"; enabled: card.frames.filter(f => f.status === "complete").length > 1; onClicked: card.play() }
             Control { text: "›"; Accessible.name: "Next frame"; enabled: card.frames.length > 1; onClicked: card.step(1) }
             ColumnLayout {
                 Layout.fillWidth: true

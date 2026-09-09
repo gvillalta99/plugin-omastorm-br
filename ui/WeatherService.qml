@@ -98,12 +98,14 @@ QtObject {
                     } catch (e) {
                         ws.error = "Open-Meteo parse error: " + e;
                     }
-                } else {
-                    ws.error = "Open-Meteo HTTP " + xhr.status;
                 }
             }
         };
         xhr.send();
+    }
+
+    function fetchWeather(lat, lon) {
+        fetch(lat, lon);
     }
 
     property Timer pollTimer: Timer {
