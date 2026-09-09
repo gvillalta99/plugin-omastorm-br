@@ -141,6 +141,13 @@ Every action name, the key syntax, and what each setting does are in
 
 ## Troubleshooting
 
+If expand or the keybind does nothing after `omarchy plugin update`, the
+shell still has the previous QML types. Restart it:
+
+```sh
+omarchy restart shell
+```
+
 The engine runs as one shared daemon per login. Its log is
 `$XDG_RUNTIME_DIR/omastorm/engine.log` (usually `/run/user/<uid>/omastorm/`).
 If the popover says the engine could not be installed, the download or its
