@@ -13,3 +13,4 @@ RadarWindow 1.0 RadarWindow.qml
 SitePicker 1.0 SitePicker.qml
 Theme 1.0 Theme.qml
 singleton RainViewerService 1.0 RainViewerService.qml
+singleton WeatherService 1.0 WeatherService.qml

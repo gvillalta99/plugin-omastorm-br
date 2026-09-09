@@ -29,6 +29,7 @@ QtObject {
     readonly property string lockedRadar: typeof values.locked_radar === "string" ? values.locked_radar.trim().toUpperCase() : ""
     // The raw value; the window judges it against the three treatments.
     readonly property var treatment: values.treatment
+    readonly property var palette: values.palette || values.color_scheme
     // The raw value; the window judges it: a dBZ number, false, or unset.
     readonly property var weakFloor: values.weak_floor
     // The `[keys]` table as action id -> value, for Keys.resolve.

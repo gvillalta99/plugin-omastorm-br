@@ -19,6 +19,13 @@ Item {
     property string azimuthLut: ""   // engine-written azimuth lookup (3600 × 1)
     property string siteId: ""
     property var sites: []           // hello.sites; locations, not live availability
+    readonly property var brSites: [
+        { id: "BAURU", name: "IPMet Bauru", op: "UNESP", lat: -22.3581, lon: -49.0278, rangeKm: 450, band: "Banda S (Doppler)" },
+        { id: "S.ROQUE", name: "REDEMET São Roque", op: "Aeronáutica/FAB", lat: -23.6000, lon: -47.0900, rangeKm: 400, band: "Banda S" },
+        { id: "P.PRUDENTE", name: "IPMet Presidente Prudente", op: "UNESP", lat: -22.1200, lon: -51.3800, rangeKm: 450, band: "Banda S" },
+        { id: "P.NOVA", name: "SIMESP Ponte Nova", op: "DAEE", lat: -23.5890, lon: -45.9670, rangeKm: 250, band: "Banda C" }
+    ]
+    readonly property var allSites: (sites && sites.length) ? sites : brSites
     readonly property real coverageKm: 460 // nominal reflectivity footprint, not measured coverage
     property string tileRoot: ""     // file URL of the runtime directory, for tile paths
     property var theme
@@ -566,6 +573,54 @@ Item {
                 border.width: 1
                 border.color: Qt.alpha(map.theme.foreground, .18)
                 antialiasing: true
+            }
+        }
+        // Radar stations across SP / Brazil
+        Repeater {
+            model: map.brSites
+            Item {
+                required property var modelData
+                readonly property real rx: (map.mercatorX(modelData.lon)-map.siteMx)*map.worldPixels
+                readonly property real ry: (map.mercatorY(modelData.lat)-map.siteMy)*map.worldPixels
+                x: rx - 5; y: ry - 5
+                width: 10; height: 10
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 5
+                    color: Qt.alpha(map.theme.accent, 0.3)
+                    border.width: 1.5; border.color: map.theme.accent
+                }
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 4; height: 4; radius: 2
+                    color: map.theme.accent
+                }
+                // Radar coverage circle
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 2 * modelData.rangeKm * map.pixelsPerKm
+                    height: width
+                    radius: width / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Qt.alpha(map.theme.accent, 0.14)
+                }
+                // Station badge / label
+                Rectangle {
+                    x: 12; y: -4
+                    width: Math.floor(stLbl.implicitWidth) + 6; height: 16
+                    color: Qt.alpha(map.theme.background, 0.85)
+                    border.width: 1; border.color: Qt.alpha(map.theme.accent, 0.5)
+                    Text {
+                        id: stLbl
+                        x: 3; anchors.verticalCenter: parent.verticalCenter
+                        text: "📡 " + modelData.id
+                        color: map.theme.foreground
+                        font.family: map.theme.font
+                        font.pixelSize: map.labelSize - 1
+                        font.bold: true
+                    }
+                }
             }
         }
         Repeater {

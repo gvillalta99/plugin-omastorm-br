@@ -59,6 +59,7 @@ QtObject {
                 hasView = true;
                 locationSource = place.source;
                 placeName = place.name || "";
+                WeatherService.fetch(place.lat, place.lon);
             } else {
                 needsLocation = true;
                 locationSource = "";
@@ -136,6 +137,7 @@ QtObject {
     function setPlace(lat, lon, name) {
         if (!Location.validPair(lat, lon)) return;
         placeName = name || "";
+        WeatherService.fetch(lat, lon);
         locationSource = "state";
         needsLocation = false;
         pendingLocationPicker = false;
@@ -248,6 +250,10 @@ QtObject {
         var errors = [], wanted = KeyMap.treatment(config.treatment, errors);
         if (!Quickshell.env("OMASTORM_STYLE") && wanted) treatment = wanted;
         if (KeyMap.envFloor(Quickshell.env("OMASTORM_WEAK")) === undefined) weakFloor = KeyMap.weakFloor(config.weakFloor, errors);
+        if (config.palette !== undefined) {
+            var p = Number(config.palette);
+            if (!isNaN(p) && p >= 0 && p <= 8) RainViewerService.colorScheme = p;
+        }
     }
 
     property Timer persistTimer: Timer { interval: 400; onTriggered: session.persist() }

@@ -38,10 +38,10 @@ Item {
     readonly property var scan: state && state.frame ? state.frame : (useRainViewer ? {
         id: "RV-" + RainViewerService.currentTime,
         scanTime: new Date(RainViewerService.currentTime * 1000).toISOString(),
-        productName: "RainViewer Live Radar",
+        productName: "RainViewer Live Radar (" + RainViewerService.currentSchemeName + ")",
         elevationDeg: 0.0,
         rays: 0, gates: 0, firstGateM: 0, gateSpacingM: 1, scale: 0, offset: 0,
-        palette: ["#34465f", "#426b88", "#4098a5", "#51b897", "#85c76b", "#cadb6b", "#f0cd61", "#eda24c", "#e67349", "#d84c64", "#b55096", "#e2b4df"],
+        palette: RainViewerService.currentColors,
         bounds: [-32, 0, 10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 96],
         site: { lat: store.centerLat, lon: store.centerLon, altM: 0 }
     } : null)
@@ -503,6 +503,56 @@ Item {
             }
             RowLayout {
                 Layout.fillWidth: true
+                visible: !isNaN(WeatherService.temperature)
+                spacing: 12
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 28
+                    color: Qt.alpha(app.theme.foreground, 0.06)
+                    border.width: 1
+                    border.color: Qt.alpha(app.theme.foreground, 0.14)
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        spacing: 12
+                        LabelText {
+                            text: "🌡️ " + (isNaN(WeatherService.temperature) ? "—" : WeatherService.temperature.toFixed(1) + "°C") +
+                                  (isNaN(WeatherService.apparentTemperature) ? "" : " (sensação " + WeatherService.apparentTemperature.toFixed(1) + "°C)")
+                            font.bold: true
+                            color: app.theme.accent
+                        }
+                        LabelText {
+                            text: "💧 " + (isNaN(WeatherService.humidity) ? "—" : Math.round(WeatherService.humidity) + "%")
+                            opacity: 0.85
+                        }
+                        LabelText {
+                            visible: !win.compact && !isNaN(WeatherService.windSpeed)
+                            text: "💨 " + (isNaN(WeatherService.windSpeed) ? "" : Math.round(WeatherService.windSpeed) + " km/h " + WeatherService.windDirectionText)
+                            opacity: 0.85
+                        }
+                        LabelText {
+                            visible: !isNaN(WeatherService.rain) && WeatherService.rain > 0
+                            text: "🌧️ " + WeatherService.rain.toFixed(1) + " mm/h"
+                            color: app.theme.accent
+                            font.bold: true
+                        }
+                        LabelText {
+                            visible: !win.compact && WeatherService.precipProb > 0
+                            text: "☔ " + WeatherService.precipProb + "% prob. chuva"
+                            opacity: 0.85
+                        }
+                        Item { Layout.fillWidth: true }
+                        LabelText {
+                            text: WeatherService.conditionText
+                            font.bold: true
+                            opacity: 0.9
+                        }
+                    }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
                 // The scan time keeps its full width; only the status text shrinks.
                 LabelText { text: !app.scan || !app.scan.scanTime ? "—" : Qt.formatDateTime(new Date(app.scan.scanTime), "yyyy-MM-dd  HH:mm t"); opacity: .75; Layout.preferredWidth: implicitWidth }
                 // The age of the frame on screen; yellow or red with the condition.
@@ -778,6 +828,26 @@ Item {
                 // The treatment chip (DESIGN.md, treatment control): one
                 // low-emphasis control naming the treatment; click opens the
                 // three in the picker's row style above it, 1 2 3 choose.
+                Button {
+                    id: paletteChip
+                    visible: app.useRainViewer
+                    implicitHeight: 30
+                    implicitWidth: contentItem.implicitWidth + 18
+                    padding: 0
+                    opacity: hovered || activeFocus ? 1 : 0.85
+                    onClicked: RainViewerService.nextColorScheme()
+                    contentItem: RowLayout {
+                        spacing: 6
+                        Item { Layout.fillWidth: true }
+                        LabelText { text: "🎨 " + RainViewerService.currentSchemeName; font.bold: true }
+                        Item { Layout.fillWidth: true }
+                    }
+                    background: Rectangle {
+                        color: paletteChip.hovered || paletteChip.activeFocus ? Qt.alpha(app.theme.accent, .25) : Qt.alpha(app.theme.accent, .12)
+                        border.width: 1
+                        border.color: paletteChip.activeFocus || paletteChip.hovered ? app.theme.accent : Qt.alpha(app.theme.accent, .5)
+                    }
+                }
                 Button {
                     id: treatmentChip
                     implicitHeight: 30

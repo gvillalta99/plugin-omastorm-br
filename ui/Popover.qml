@@ -14,10 +14,10 @@ FocusScope {
     readonly property var scan: state && state.frame ? state.frame : (useRainViewer ? {
         id: "RV-" + RainViewerService.currentTime,
         scanTime: new Date(RainViewerService.currentTime * 1000).toISOString(),
-        productName: "RainViewer",
+        productName: "RainViewer (" + RainViewerService.currentSchemeName + ")",
         elevationDeg: 0.0,
         rays: 0, gates: 0, firstGateM: 0, gateSpacingM: 1, scale: 0, offset: 0,
-        palette: ["#34465f", "#426b88", "#4098a5", "#51b897", "#85c76b", "#cadb6b", "#f0cd61", "#eda24c", "#e67349", "#d84c64", "#b55096", "#e2b4df"],
+        palette: RainViewerService.currentColors,
         bounds: [-32, 0, 10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 96],
         site: { lat: session.centerLat, lon: session.centerLon, altM: 0 }
     } : null)
@@ -113,6 +113,41 @@ FocusScope {
             Label { Layout.fillWidth: true; text: connection.site ? connection.site.name : (card.useRainViewer ? (session.placeName || "LIVE RADAR") : ""); opacity: .65 }
             Rectangle { width: 5; height: 5; radius: 3; color: card.statusColor }
             Label { text: card.statusText; color: card.statusColor; font.pixelSize: 11 }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            visible: !isNaN(WeatherService.temperature)
+            spacing: 8
+            Rectangle {
+                Layout.fillWidth: true
+                height: 24
+                color: Qt.alpha(card.theme.foreground, 0.06)
+                border.width: 1
+                border.color: Qt.alpha(card.theme.foreground, 0.12)
+                radius: 3
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    spacing: 8
+                    Label {
+                        text: (isNaN(WeatherService.temperature) ? "" : Math.round(WeatherService.temperature) + "°C") +
+                              (isNaN(WeatherService.humidity) ? "" : " · 💧 " + Math.round(WeatherService.humidity) + "%") +
+                              (isNaN(WeatherService.rain) || WeatherService.rain <= 0 ? "" : " · 🌧️ " + WeatherService.rain.toFixed(1) + "mm/h")
+                        font.bold: true
+                        font.pixelSize: 11
+                        color: card.theme.accent
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: WeatherService.conditionText
+                        font.pixelSize: 10
+                        opacity: 0.7
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignRight
+                    }
+                }
+            }
         }
         Rectangle {
             Layout.fillWidth: true

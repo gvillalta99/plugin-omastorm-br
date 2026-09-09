@@ -2,12 +2,15 @@
   "schemaVersion": 1,
   "id": "com.omastorm.radar",
   "name": "Omastorm BR",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Wes Grimes / Adapted by gvillalta99",
   "license": "MIT",
   "homepage": "https://github.com/gvillalta99/plugin-omastorm-br",
   "description": "Live Radar for Omarchy desktop with RainViewer and global/BR coverage",
-  "kinds": ["bar-widget", "panel"],
+  "kinds": [
+    "bar-widget",
+    "panel"
+  ],
   "entryPoints": {
     "barWidget": "ui/RadarBar.qml",
     "panel": "ui/Panel.qml"
