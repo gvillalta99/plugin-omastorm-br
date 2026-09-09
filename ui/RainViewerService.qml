@@ -86,7 +86,7 @@ QtObject {
     }
 
     property Timer playTimer: Timer {
-        interval: 650
+        interval: 1200
         running: rv.playing && rv.frames.length > 1
         repeat: true
         onTriggered: {

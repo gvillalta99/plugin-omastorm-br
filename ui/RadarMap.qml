@@ -304,23 +304,23 @@ Item {
                 opacity: map.radarOpacity
                 smooth: RainViewerService.smooth
                 asynchronous: true
-                cache: false
+                cache: true
                 source: RainViewerService.tileUrl(level, column, row)
                 visible: RainViewerService.currentPath !== ""
 
                 Connections {
                     target: RainViewerService
                     function onCurrentIndexChanged() {
-                        rvTileImg.source = ""
-                        rvTileImg.source = RainViewerService.tileUrl(level, column, row)
+                        var next = RainViewerService.tileUrl(level, column, row);
+                        if (rvTileImg.source !== next) rvTileImg.source = next;
                     }
                     function onColorSchemeChanged() {
-                        rvTileImg.source = ""
-                        rvTileImg.source = RainViewerService.tileUrl(level, column, row)
+                        var next = RainViewerService.tileUrl(level, column, row);
+                        if (rvTileImg.source !== next) rvTileImg.source = next;
                     }
                     function onSmoothChanged() {
-                        rvTileImg.source = ""
-                        rvTileImg.source = RainViewerService.tileUrl(level, column, row)
+                        var next = RainViewerService.tileUrl(level, column, row);
+                        if (rvTileImg.source !== next) rvTileImg.source = next;
                     }
                 }
             }
