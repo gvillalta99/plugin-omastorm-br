@@ -52,7 +52,7 @@ BarWidget {
         padding: 12
         borderSpec: Border.flat(Color.accent, 2)
         contentWidth: 336
-        contentHeight: content.item ? content.item.implicitHeight + 28 : 440
+        contentHeight: content.item ? content.item.implicitHeight + 24 : 420
         focusTarget: content.item
         Loader {
             id: content

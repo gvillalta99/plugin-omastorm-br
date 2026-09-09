@@ -28,10 +28,16 @@ FocusScope {
         status: "complete"
     })) : [])
     readonly property var slots: Timeline.slots(frames)
-    readonly property string condition: state ? state.source === "archived" ? "archived" : state.connection.status : (useRainViewer ? "ok" : "offline")
+    readonly property string condition: useRainViewer ? "ok" : (state ? state.source === "archived" ? "archived" : state.connection.status : "offline")
     readonly property color statusColor: condition === "stale" ? theme.yellow
         : condition === "offline" || condition === "unavailable" ? theme.red : theme.accent
     readonly property string statusText: {
+        if (useRainViewer) {
+            if (!scan || !scan.scanTime) return "LIVE";
+            var ageSec = Math.max(0, Math.round((Date.now() - Date.parse(scan.scanTime)) / 1000));
+            var m = Math.floor(ageSec / 60);
+            return "LIVE · " + (m < 1 ? "agora" : m < 60 ? m + " min atrás" : Math.floor(m / 60) + "h atrás");
+        }
         if (!state) return "OFFLINE";
         if (condition === "archived") return "ARCHIVED";
         var label = condition === "ok" ? "LIVE" : condition.toUpperCase();
@@ -45,7 +51,7 @@ FocusScope {
     }
     signal expandRequested()
     signal closeRequested()
-    implicitWidth: 308
+    implicitWidth: 312
     implicitHeight: layout.implicitHeight
     Engine { id: connection }
     function step(delta) {
@@ -151,7 +157,7 @@ FocusScope {
         }
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 280
+            Layout.preferredHeight: 240
             color: card.theme.background
             border.color: Qt.alpha(card.theme.foreground, .17)
             clip: true
@@ -191,7 +197,7 @@ FocusScope {
                     implicitWidth: product.implicitWidth + 10; implicitHeight: 20
                     color: Qt.alpha(card.theme.background, .92)
                     Label { id: product; anchors.centerIn: parent; font.pixelSize: 10; opacity: .8
-                        text: card.scan ? card.scan.productName.toUpperCase() + " " + card.scan.elevationDeg.toFixed(1) + "°" : "" }
+                        text: card.useRainViewer ? "RAINVIEWER" : (card.scan ? card.scan.productName.toUpperCase() + " " + card.scan.elevationDeg.toFixed(1) + "°" : "") }
                 }
                 Item { Layout.fillWidth: true }
                 Rectangle {
@@ -230,7 +236,7 @@ FocusScope {
         }
         Label {
             Layout.fillWidth: true
-            visible: !!connection.rejection
+            visible: !card.useRainViewer && !!connection.rejection
             text: connection.rejection; color: card.theme.accent; wrapMode: Text.Wrap
         }
         RowLayout {
@@ -273,7 +279,7 @@ FocusScope {
             Layout.fillWidth: true
             Label {
                 Layout.fillWidth: true; font.pixelSize: 8; opacity: .5; elide: Text.ElideRight
-                text: map.osmOnScreen ? "NOAA · © OpenStreetMap" : "NOAA · Natural Earth"
+                text: card.useRainViewer ? "RainViewer · © OpenStreetMap" : (map.osmOnScreen ? "NOAA · © OpenStreetMap" : "NOAA · Natural Earth")
             }
             Control { text: "EXPAND"; onClicked: card.expandRequested() }
         }
