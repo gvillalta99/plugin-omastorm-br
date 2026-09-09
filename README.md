@@ -194,3 +194,11 @@ pull request workflow. [DESIGN.md](DESIGN.md) defines the app's visual and
 interaction rules; the [engine guide](engine/README.md) and
 [wire protocol](docs/protocol.md) explain the backend/client boundary.
 Maintainers can follow the [release guide](docs/RELEASING.md).
+
+## Omastorm BR (Adaptation for Brazil & Global Coverage)
+
+This fork adapted the plugin for Brazil and worldwide locations using **RainViewer API** and **OpenStreetMap Nominatim**:
+- Integrates RainViewer live radar and past scan loops (including São Paulo, Americana, Campinas, Rio de Janeiro, etc.).
+- Adds global city geocoding in the Location Picker (`Shift+H` or search) via Nominatim so Brazilian cities are directly searchable.
+- Default launch coordinates fall back to Americana/SP/Brazil if no other location is configured.
+- Seamlessly falls back to NEXRAD Level II when browsing US stations.

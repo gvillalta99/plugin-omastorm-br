@@ -34,17 +34,32 @@ Item {
         else close();
     }
     readonly property var state: engine.state
-    readonly property var scan: state ? state.frame : null
-    // Every station, product, and source string on screen comes from the engine.
-    readonly property string siteId: state ? state.site.id : ""
-    readonly property string siteName: engine.site ? engine.site.name.toUpperCase() : ""
-    readonly property string sourceBadge: state ? state.source.toUpperCase() : ""
+    readonly property bool useRainViewer: RainViewerService.currentPath !== ""
+    readonly property var scan: state && state.frame ? state.frame : (useRainViewer ? {
+        id: "RV-" + RainViewerService.currentTime,
+        scanTime: new Date(RainViewerService.currentTime * 1000).toISOString(),
+        productName: "RainViewer Live Radar",
+        elevationDeg: 0.0,
+        rays: 0, gates: 0, firstGateM: 0, gateSpacingM: 1, scale: 0, offset: 0,
+        palette: ["#34465f", "#426b88", "#4098a5", "#51b897", "#85c76b", "#cadb6b", "#f0cd61", "#eda24c", "#e67349", "#d84c64", "#b55096", "#e2b4df"],
+        bounds: [-32, 0, 10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 96],
+        site: { lat: store.centerLat, lon: store.centerLon, altM: 0 }
+    } : null)
+    // Every station, product, and source string on screen comes from the engine or RainViewer.
+    readonly property string siteId: state && state.site && state.site.id ? state.site.id : (useRainViewer ? (store.placeName ? store.placeName.toUpperCase() : "RAINVIEWER BR") : "")
+    readonly property string siteName: engine.site ? engine.site.name.toUpperCase() : (useRainViewer ? (store.placeName ? store.placeName.toUpperCase() : "AMERICANA / SP / GLOBAL") : "")
+    readonly property string sourceBadge: state && state.source ? state.source.toUpperCase() : (useRainViewer ? "RAINVIEWER LIVE" : "")
     // The timeline (DESIGN.md): the station's frames oldest
     // first with the sweep in progress last; the engine owns the position.
-    readonly property var frames: state ? state.timeline : []
-    readonly property int frameIndex: scan ? frames.findIndex(f => f.id === scan.id) : -1
+    readonly property var frames: state && state.timeline && state.timeline.length ? state.timeline : (useRainViewer ? RainViewerService.frames.map(f => ({
+        id: "RV-" + f.time,
+        scanTime: new Date(f.time * 1000).toISOString(),
+        start_ms: f.time * 1000,
+        status: "complete"
+    })) : [])
+    readonly property int frameIndex: scan ? frames.findIndex(f => f.id === scan.id) : (useRainViewer ? RainViewerService.currentIndex : -1)
     readonly property bool newestShown: frameIndex >= 0 && frameIndex === frames.length - 1
-    readonly property bool playing: state ? state.playing : false
+    readonly property bool playing: state ? state.playing : (useRainViewer ? RainViewerService.playing : false)
     readonly property var newestComplete: { var done = frames.filter(f => f.status === "complete"); return done.length ? done[done.length - 1] : null; }
     // The connection condition while live (DESIGN.md):
     // the header's third row shows the age of the frame on screen beside
@@ -99,9 +114,18 @@ Item {
     // gap of about two or more median intervals, at most three stubs).
     readonly property var slots: Timeline.slots(frames)
     readonly property int currentSlot: scan ? slots.findIndex(s => s.id === scan.id) : -1
-    function togglePlay() { if (frames.length > 1) engine.send({type: playing ? "pause" : "play"}); }
-    function step(delta) { if (frames.length > 1) engine.send({type: "step", delta: delta}); }
-    function jump(toNewest) { if (frames.length > 1) engine.send({type: "seek", id: frames[toNewest ? frames.length - 1 : 0].id}); }
+    function togglePlay() {
+        if (state && frames.length > 1) engine.send({type: playing ? "pause" : "play"});
+        else if (useRainViewer) RainViewerService.togglePlay();
+    }
+    function step(delta) {
+        if (state && frames.length > 1) engine.send({type: "step", delta: delta});
+        else if (useRainViewer) RainViewerService.step(delta);
+    }
+    function jump(toNewest) {
+        if (state && frames.length > 1) engine.send({type: "seek", id: frames[toNewest ? frames.length - 1 : 0].id});
+        else if (useRainViewer) RainViewerService.jump(toNewest);
+    }
     readonly property int bands: scan ? scan.palette.length : 0
     function legendLabel(index) {
         var bounds = scan.bounds;
@@ -637,7 +661,13 @@ Item {
                                 while (hi < n && app.slots[hi].stub) hi++;
                                 var pick = lo < 0 ? hi : hi >= n ? lo : i - lo <= hi - i ? lo : hi;
                                 var id = app.slots[pick].id;
-                                if (id && id !== target) { target = id; engine.send({type: "seek", id: id}); }
+                                if (id && id !== target) {
+                                    target = id;
+                                    if (app.state) engine.send({type: "seek", id: id});
+                                    else if (app.useRainViewer && app.slots[pick].start_ms) {
+                                        RainViewerService.seek(Math.round(app.slots[pick].start_ms / 1000));
+                                    }
+                                }
                             }
                             onPressed: mouse => { target = ""; scrub(mouse.x); }
                             onPositionChanged: mouse => { if (pressed) scrub(mouse.x); }

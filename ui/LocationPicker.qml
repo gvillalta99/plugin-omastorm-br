@@ -90,27 +90,82 @@ Item {
     }
     function go(lat, lon, name) { close(); chosen(lat, lon, name || ""); }
     onQueryChanged: { selected = 0; search.restart(); }
+    property var osmHttp: null
     Timer {
         id: search
-        interval: 120
+        interval: 200
         onTriggered: {
-            if (!picker.open || !picker.engine) return;
+            if (!picker.open) return;
             var q = picker.query.trim();
             if (!q) { picker.results = []; return; }
             picker.pendingQuery = q;
-            var cmd = {type: "search_places", query: q};
-            if (Location.validPair(picker.centerLat, picker.centerLon)) {
-                cmd.lat = picker.centerLat;
-                cmd.lon = picker.centerLon;
+            
+            // Try local engine first
+            if (picker.engine) {
+                var cmd = {type: "search_places", query: q};
+                if (Location.validPair(picker.centerLat, picker.centerLon)) {
+                    cmd.lat = picker.centerLat;
+                    cmd.lon = picker.centerLon;
+                }
+                picker.engine.send(cmd);
             }
-            picker.engine.send(cmd);
+
+            // Also query OpenStreetMap Nominatim for global/Brazilian cities
+            var xhr = new XMLHttpRequest();
+            picker.osmHttp = xhr;
+            xhr.open("GET", "https://nominatim.openstreetmap.org/search?q=" + encodeURIComponent(q) + "&format=json&limit=5");
+            xhr.setRequestHeader("User-Agent", "OmastormBR/1.0");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                    if (!picker.open || q !== picker.pendingQuery) return;
+                    try {
+                        var list = JSON.parse(xhr.responseText);
+                        var osmResults = [];
+                        for (var item of list) {
+                            var displayName = item.display_name || "";
+                            var parts = displayName.split(",");
+                            var name = parts[0] ? parts[0].trim() : item.name;
+                            var region = parts.length > 1 ? parts[1].trim() : "";
+                            var country = parts.length > 2 ? parts[parts.length - 1].trim() : "";
+                            osmResults.push({
+                                name: name,
+                                lat: Number(item.lat),
+                                lon: Number(item.lon),
+                                region: region,
+                                country: country,
+                                class: item.type || "city"
+                            });
+                        }
+                        if (osmResults.length > 0) {
+                            // Merge with existing results, avoiding exact lat/lon duplicates
+                            var combined = (picker.results || []).slice();
+                            for (var nr of osmResults) {
+                                if (!combined.some(c => Math.abs(c.lat - nr.lat) < 0.05 && Math.abs(c.lon - nr.lon) < 0.05)) {
+                                    combined.push(nr);
+                                }
+                            }
+                            picker.results = combined;
+                        }
+                    } catch (e) {}
+                }
+            };
+            xhr.send();
         }
     }
     Connections {
         target: picker.engine
         function onPlacesReady(message) {
             if (!picker.open || message.query !== picker.pendingQuery) return;
-            picker.results = message.results || [];
+            var engineRes = message.results || [];
+            if (engineRes.length > 0) {
+                var combined = engineRes.slice();
+                for (var r of (picker.results || [])) {
+                    if (!combined.some(c => Math.abs(c.lat - r.lat) < 0.05 && Math.abs(c.lon - r.lon) < 0.05)) {
+                        combined.push(r);
+                    }
+                }
+                picker.results = combined;
+            }
         }
     }
     Rectangle {

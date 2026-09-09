@@ -59,9 +59,9 @@ Item {
     function longitude(mx) { return mx * 360 - 180; }
     function latitude(my) { return Math.atan(Math.sinh(Math.PI * (1 - 2 * my))) * 180 / Math.PI; }
     readonly property var site: scan ? scan.site : null
-    readonly property real siteLat: site ? site.lat : 0
-    readonly property real siteMx: site ? mercatorX(site.lon) : 0.5
-    readonly property real siteMy: site ? mercatorY(site.lat) : 0.5
+    readonly property real siteLat: site ? site.lat : (centerLat || 0)
+    readonly property real siteMx: site ? mercatorX(site.lon) : mercatorX(centerLon || 0)
+    readonly property real siteMy: site ? mercatorY(site.lat) : mercatorY(centerLat || 0)
     // Ground kilometres per Mercator unit at the site's latitude, on the
     // shader's 6371 km sphere; span and the range rings are measured there.
     readonly property real kmPerUnit: 2 * Math.PI * 6371 * Math.cos(siteLat * Math.PI / 180)
@@ -252,7 +252,7 @@ Item {
     }
     Repeater {
         model: tileModel
-        ShaderEffect {
+        Item {
             // Roles avoid Item's own x, y, and z.
             required property string key
             visible: level === map.displayedLevel
@@ -269,22 +269,36 @@ Item {
             y: Math.round(edgeY)
             width: Math.round(map.sx((column + 1) / n)) - Math.round(edgeX)
             height: Math.round(map.sy((row + 1) / n)) - Math.round(edgeY)
-            property var mask: Image {
-                source: map.tileRoot + path
-                visible: false
-                smooth: true
-                mipmap: false
-                cache: false
-                asynchronous: true
-                onStatusChanged: map.imageReady(key, path, status === Image.Ready)
-                Component.onCompleted: map.imageReady(key, path, status === Image.Ready)
+
+            ShaderEffect {
+                anchors.fill: parent
+                property var mask: Image {
+                    source: map.tileRoot + path
+                    visible: false
+                    smooth: true
+                    mipmap: false
+                    cache: false
+                    asynchronous: true
+                    onStatusChanged: map.imageReady(key, path, status === Image.Ready)
+                    Component.onCompleted: map.imageReady(key, path, status === Image.Ready)
+                }
+                property color boundaries: Qt.alpha(map.theme.foreground, .32)
+                property color water: Qt.alpha(map.theme.accent, .55)
+                property color minorRoads: Qt.alpha(map.theme.foreground, .24)
+                property color majorRoads: Qt.alpha(map.theme.foreground, .48)
+                fragmentShader: "shaders/tile.frag.qsb"
+                onStatusChanged: if (status === ShaderEffect.Error) map.error = "Basemap GPU shader failed: " + log
             }
-            property color boundaries: Qt.alpha(map.theme.foreground, .32)
-            property color water: Qt.alpha(map.theme.accent, .55)
-            property color minorRoads: Qt.alpha(map.theme.foreground, .24)
-            property color majorRoads: Qt.alpha(map.theme.foreground, .48)
-            fragmentShader: "shaders/tile.frag.qsb"
-            onStatusChanged: if (status === ShaderEffect.Error) map.error = "Basemap GPU shader failed: " + log
+
+            // RainViewer radar tile overlay per Web Mercator tile
+            Image {
+                anchors.fill: parent
+                opacity: map.radarOpacity
+                smooth: true
+                asynchronous: true
+                source: RainViewerService.tileUrl(level, column, row)
+                visible: RainViewerService.currentPath !== ""
+            }
         }
     }
 
@@ -478,7 +492,7 @@ Item {
     }
     ShaderEffect {
         id: radarEffect
-        visible: map.drawable
+        visible: map.drawable && RainViewerService.currentPath === ""
         // The radar alone, not the basemap: .6 under UNAVAILABLE.
         opacity: map.radarOpacity
         anchors.fill: parent

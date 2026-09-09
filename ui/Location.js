@@ -142,7 +142,8 @@ function resolvePlace(explicit, remembered, weather, env) {
         return { lat: remembered.lat, lon: remembered.lon, name: remembered.name || "", source: "state", span: remembered.span };
     if (weather && validPair(weather.lat, weather.lon))
         return { lat: weather.lat, lon: weather.lon, name: weather.name || "", source: "weather", span: remembered && remembered.span };
-    return null;
+    // Default fallback to Americana/SP/Brasil if no other location configured
+    return { lat: -22.7392, lon: -47.3306, name: "Americana, SP", source: "default", span: remembered && remembered.span };
 }
 
 // RESET target: configured centre, else weather, else none (keep the camera,

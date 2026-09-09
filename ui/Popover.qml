@@ -10,10 +10,25 @@ FocusScope {
     property var theme: session.theme.snapshot
     property alias engine: connection
     readonly property var state: connection.state
-    readonly property var scan: state ? state.frame : null
-    readonly property var frames: state ? state.timeline : []
+    readonly property bool useRainViewer: RainViewerService.currentPath !== ""
+    readonly property var scan: state && state.frame ? state.frame : (useRainViewer ? {
+        id: "RV-" + RainViewerService.currentTime,
+        scanTime: new Date(RainViewerService.currentTime * 1000).toISOString(),
+        productName: "RainViewer",
+        elevationDeg: 0.0,
+        rays: 0, gates: 0, firstGateM: 0, gateSpacingM: 1, scale: 0, offset: 0,
+        palette: ["#34465f", "#426b88", "#4098a5", "#51b897", "#85c76b", "#cadb6b", "#f0cd61", "#eda24c", "#e67349", "#d84c64", "#b55096", "#e2b4df"],
+        bounds: [-32, 0, 10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 96],
+        site: { lat: session.centerLat, lon: session.centerLon, altM: 0 }
+    } : null)
+    readonly property var frames: state && state.timeline && state.timeline.length ? state.timeline : (useRainViewer ? RainViewerService.frames.map(f => ({
+        id: "RV-" + f.time,
+        scanTime: new Date(f.time * 1000).toISOString(),
+        start_ms: f.time * 1000,
+        status: "complete"
+    })) : [])
     readonly property var slots: Timeline.slots(frames)
-    readonly property string condition: state ? state.source === "archived" ? "archived" : state.connection.status : "offline"
+    readonly property string condition: state ? state.source === "archived" ? "archived" : state.connection.status : (useRainViewer ? "ok" : "offline")
     readonly property color statusColor: condition === "stale" ? theme.yellow
         : condition === "offline" || condition === "unavailable" ? theme.red : theme.accent
     readonly property string statusText: {
@@ -33,8 +48,14 @@ FocusScope {
     implicitWidth: 308
     implicitHeight: layout.implicitHeight
     Engine { id: connection }
-    function step(delta) { if (state) connection.send({type: "step", delta: delta}); }
-    function play() { if (state) connection.send({type: state.playing ? "pause" : "play"}); }
+    function step(delta) {
+        if (state) connection.send({type: "step", delta: delta});
+        else if (useRainViewer) RainViewerService.step(delta);
+    }
+    function play() {
+        if (state) connection.send({type: state.playing ? "pause" : "play"});
+        else if (useRainViewer) RainViewerService.togglePlay();
+    }
     // Respect the same config keys as the window; Enter always expands.
     Shortcut { id: probe; enabled: false }
     function canon(sequence) { probe.sequence = sequence; return probe.portableText; }
@@ -88,8 +109,8 @@ FocusScope {
         RowLayout {
             Layout.fillWidth: true
             spacing: 6
-            Label { text: card.state ? card.state.site.id : "—"; font.bold: true; font.pixelSize: 14 }
-            Label { Layout.fillWidth: true; text: connection.site ? connection.site.name : ""; opacity: .65 }
+            Label { text: card.state && card.state.site ? card.state.site.id : (card.useRainViewer ? (session.placeName ? session.placeName.toUpperCase() : "RAINVIEWER BR") : "—"); font.bold: true; font.pixelSize: 14 }
+            Label { Layout.fillWidth: true; text: connection.site ? connection.site.name : (card.useRainViewer ? (session.placeName || "LIVE RADAR") : ""); opacity: .65 }
             Rectangle { width: 5; height: 5; radius: 3; color: card.statusColor }
             Label { text: card.statusText; color: card.statusColor; font.pixelSize: 11 }
         }
