@@ -58,5 +58,14 @@ for _ in {1..50}; do
   sleep .1
 done
 [[ $site == *"\"id\":\"$first\""* && $site == *'"locked":true'* ]] || fail "Enter did not select and lock $first: $site"
+want_lat=$(jq -r --arg id "$first" '.sites[] | select(.id==$id) | ((.lat * 1000) | round) / 1000' engine/data/sites.json)
+want_lon=$(jq -r --arg id "$first" '.sites[] | select(.id==$id) | ((.lon * 1000) | round) / 1000' engine/data/sites.json)
+for _ in {1..50}; do
+  lat=$(quickshell ipc --pid "$pid" call keys field lat)
+  lon=$(quickshell ipc --pid "$pid" call keys field lon)
+  [[ $lat == "$want_lat" && $lon == "$want_lon" ]] && break
+  sleep .1
+done
+[[ $lat == "$want_lat" && $lon == "$want_lon" ]] || fail "Enter did not centre the map on $first" "Expected: $want_lat $want_lon" "Actual:   $lat $lon"
 if rg -q 'TypeError|ReferenceError|Unable to assign|Failed to create.*context' "$check_dir/log"; then fail "QML errors in the log"; fi
 echo "PICKER_PASSED"

@@ -40,8 +40,9 @@ available through `Shift+H` and LOCATION after onboarding.
 Resolve the radar independently: configured `locked_radar`, then a remembered
 UI lock, then the nearest station to the resolved center. A configured radar
 alone does not resolve a location. Coordinates never imply a lock. Choosing a
-location through the picker clears a remembered lock; a configured override
-still applies.
+station in search locks it and centres the map on that site. `n` selects the
+nearest radar without moving the camera. Choosing a location through the
+picker clears a remembered lock; a configured override still applies.
 
 Restore remembered zoom, or the default zoom when none is valid. Keep the
 camera at the resolved location when frames arrive. Close and reopen preserve

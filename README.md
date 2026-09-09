@@ -93,7 +93,7 @@ cannot be reached, with cached frames kept.
 | `h` `j` `k` `l` or arrows | Pan |
 | `+` `-` | Zoom |
 | `0` | Reset to the configured or weather location |
-| `/` or `s` | Search sites |
+| `/` or `s` | Search sites (center and lock) |
 | `n` | Nearest site |
 | `Shift+L` | Lock the station |
 | `Shift+H` | Choose a location |

@@ -6,8 +6,8 @@ import "Sites.js" as Sites
 // launcher's style: a scrim over the window, a card with an input row, up to
 // four matches with the matched letters in accent and each station's
 // distance and bearing from the map centre, and a hint footer. Typing
-// filters, up and down move, Enter hands the station to `chosen`, Escape or
-// a click on the scrim closes. The keys are handled here while it is open;
+// filters, up and down move, Enter hands the station to `chosen` (lock and
+// centre), Escape or a click on the scrim closes. The keys are handled here
 // the window's own shortcuts stand down.
 Item {
     id: picker

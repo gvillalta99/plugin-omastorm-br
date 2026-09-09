@@ -352,7 +352,8 @@ preserves the view rather than selecting another station. The session owns
 remembered-view writes so surfaces do not overwrite one another's state.
 On launch, the UI applies explicit config over remembered state. Reconnecting
 to the engine restores the necessary selection and flags without resetting
-the active camera. A change of frame or station never re-centers the map.
+the active camera. A change of frame or station never re-centers the map
+except when the user picks a station in search, which the UI centres on.
 Location picks write state.json. With no location, the popover offers the
 picker instead of inventing a centre.
 

@@ -64,7 +64,9 @@ Remember center and zoom after movement settles, and remember changes to the
 UI radar lock. Unlocked radar selection follows the center using the protocol's
 nearest-station hysteresis; do not wait until the center leaves the radar's
 rings. Lock pins the source; `n` releases it and selects the nearest station
-without moving the camera. Do not persist the automatically selected station.
+without moving the camera. Choosing a station in search locks it and centres
+the map on that site. Automatic hand-off and loading a frame never move the
+camera. Do not persist the automatically selected station.
 
 Closing preserves the view. Reopening restores it, with explicit config
 values taking precedence. Expanding the popover preserves its center, zoom,

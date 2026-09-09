@@ -154,8 +154,8 @@ QtObject {
             lockSource = "nearest";
         }
         persist();
-        applyRadar();
         viewChanged();
+        applyRadar();
     }
 
     function resetView() {
@@ -172,8 +172,27 @@ QtObject {
         span = Location.DEFAULT_SPAN;
         hasView = true;
         persist();
-        applyRadar();
         viewChanged();
+        applyRadar();
+    }
+
+    function chooseRadar(id, lat, lon, name) {
+        lat = Number(lat);
+        lon = Number(lon);
+        if (!id || !Location.validPair(lat, lon)) return;
+        placeName = name || id;
+        locationSource = "state";
+        needsLocation = false;
+        pendingLocationPicker = false;
+        centerLat = lat;
+        centerLon = lon;
+        hasView = true;
+        lockId = id;
+        lockWanted = true;
+        lockSource = "state";
+        persist();
+        viewChanged();
+        applyRadar();
     }
 
     function setLock(id, on) {

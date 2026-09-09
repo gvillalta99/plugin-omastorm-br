@@ -88,7 +88,11 @@ Item {
     function look(mx, my) { center = Qt.point(longitude(mx), latitude(my)); }
     // Centre exactly on a place. Loading frames and radar hand-offs must
     // not call this; the camera is the user's (DESIGN.md, location).
-    function lookAt(lat, lon) { center = Qt.point(lon, lat); }
+    function lookAt(lat, lon) {
+        // A fresh object: assigning Qt.point onto `var` can no-op when Qt
+        // treats the previous point as equal, so the camera never moves.
+        center = { x: Number(lon), y: Number(lat) };
+    }
     signal resetRequested()
     // The keyboard pan (DESIGN.md, keyboard map): one step is an eighth of
     // the viewport's shorter side, in the given screen direction.

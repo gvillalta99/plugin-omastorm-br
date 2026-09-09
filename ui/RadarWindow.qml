@@ -140,11 +140,17 @@ Item {
     // PluginSession owns config.toml, state.json, and the camera; this
     // window applies the view to its map and sends map-local tile requests.
     readonly property var config: store.config
+    property bool applyingView: false
+    Timer { id: applyingViewClear; interval: 250; onTriggered: app.applyingView = false }
     function applyView() {
         if (!store.hasView) return;
+        applyingView = true;
+        applyingViewClear.restart();
         map.holdSpan = true;
         map.lookAt(store.centerLat, store.centerLon);
         map.span = store.span;
+        if (engine.state)
+            engine.send({type: "view_center", lat: store.centerLat, lon: store.centerLon});
         Qt.callLater(() => { map.holdSpan = false; });
     }
     property bool viewApplied: false
@@ -242,8 +248,8 @@ Item {
         }
     }
     // Site navigation (DESIGN.md, location): the lock pins the radar against
-    // hand-offs without moving the camera; `n` releases it and selects the
-    // nearest radar. The site picker locks. Neither moves the camera.
+    // hand-offs; `n` releases it and selects the nearest radar without moving
+    // the camera. The site picker locks and centres on that station.
     readonly property bool locked: state ? state.site.locked : false
     readonly property bool following: state ? state.site.follow && !state.site.locked : false
     readonly property var resetTarget: Location.resolveReset(Location.configCenter(config.values), config.location)
@@ -267,8 +273,9 @@ Item {
         store.followNearest(s.id);
     }
     function choose(s) {
-        if (!state) return;
-        store.setLock(s.id, true);
+        if (!state || !s) return;
+        store.chooseRadar(s.id, Number(s.lat), Number(s.lon), s.name || s.id);
+        applyView();
     }
     // Drives the picker from outside for checks and captures:
     // quickshell ipc --pid <pid> call picker open tul
@@ -522,6 +529,13 @@ Item {
                     // station while following and unlocked; the camera stays.
                     onViewSettled: (lat, lon) => {
                         if (!app.opened || app.store.needsLocation) return;
+                        // A pick or restore already set the store; a settle
+                        // still queued from the previous camera must not
+                        // write that centre back (radar jumps, map stays).
+                        if (app.applyingView
+                            && (Math.abs(lat - app.store.centerLat) > 0.05
+                                || Math.abs(lon - app.store.centerLon) > 0.05))
+                            return;
                         engine.send({type: "view_center", lat: lat, lon: lon});
                         app.store.rememberView(lat, lon, map.span);
                     }

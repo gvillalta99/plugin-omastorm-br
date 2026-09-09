@@ -70,6 +70,10 @@ until_field lat 35.4
 until_field lon -97.5
 until_field locationSource state
 until_field locked false
+# A queued settle from the previous camera must not pull the view back.
+sleep 0.4
+until_field lat 35.4
+until_field lon -97.5
 grep -q '"lat":35.4' "$check_dir/state-weather.json" || fail "Location picker did not write state" "$(cat "$check_dir/state-weather.json")"
 grep -q center_lat "$check_dir/none.toml" && fail "Location picker wrote config.toml"
 # n selects the nearest radar and does not move the camera.
