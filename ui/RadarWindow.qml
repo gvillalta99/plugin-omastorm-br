@@ -20,6 +20,8 @@ Item {
         opened = true;
         if (session) session.windowOpen = true;
         applyView();
+        RainViewerService.refresh();
+        if (store.centerLat && store.centerLon) WeatherService.fetchWeather(store.centerLat, store.centerLon);
         if (store.needsLocation || store.pendingLocationPicker) Qt.callLater(() => locationPicker.show(""));
     }
     function close() {

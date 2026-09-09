@@ -101,7 +101,7 @@ QtObject {
     function refresh() {
         loading = true;
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://api.rainviewer.com/public/weather-maps.json");
+        xhr.open("GET", "https://api.rainviewer.com/public/weather-maps.json?_t=" + Date.now());
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 loading = false;
@@ -112,9 +112,10 @@ QtObject {
                         var past = data.radar && data.radar.past ? data.radar.past : [];
                         var nowcast = data.radar && data.radar.nowcast ? data.radar.nowcast : [];
                         var all = past.concat(nowcast);
+                        var wasAtNewest = (rv.currentIndex === -1 || rv.currentIndex >= rv.frames.length - 1);
                         rv.frames = all;
                         if (all.length > 0) {
-                            if (rv.currentIndex < 0 || rv.currentIndex >= all.length - 1) {
+                            if (wasAtNewest || rv.currentIndex < 0 || rv.currentIndex >= all.length) {
                                 rv.currentIndex = all.length - 1;
                             }
                         }
@@ -131,7 +132,7 @@ QtObject {
     }
 
     property Timer refreshTimer: Timer {
-        interval: 300000 // 5 minutes
+        interval: 120000 // 2 minutes
         running: true
         repeat: true
         onTriggered: rv.refresh()

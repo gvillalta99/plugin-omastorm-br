@@ -16,6 +16,8 @@ BarWidget {
     function open() {
         popoutSwitchClosing = false;
         opened = true;
+        RainViewerService.refresh();
+        if (session && session.centerLat && session.centerLon) WeatherService.fetchWeather(session.centerLat, session.centerLon);
     }
     function close() { opened = false; }
     function closeForPopoutSwitch() { popoutSwitchClosing = true; close(); }
