@@ -46,8 +46,8 @@ Item {
         site: { lat: store.centerLat, lon: store.centerLon, altM: 0 }
     } : null)
     // Every station, product, and source string on screen comes from the engine or RainViewer.
-    readonly property string siteId: state && state.site && state.site.id ? state.site.id : (useRainViewer ? (store.placeName ? store.placeName.toUpperCase() : "RAINVIEWER BR") : "")
-    readonly property string siteName: engine.site ? engine.site.name.toUpperCase() : (useRainViewer ? (store.placeName ? store.placeName.toUpperCase() : "AMERICANA / SP / GLOBAL") : "")
+    readonly property string siteId: useRainViewer ? (store.placeName ? store.placeName.toUpperCase() : "BRASIL / GLOBAL") : (state && state.site && state.site.id ? state.site.id : "")
+    readonly property string siteName: useRainViewer ? "COBERTURA RAINVIEWER / METEOROLÓGICA" : (engine.site ? engine.site.name.toUpperCase() : "")
     readonly property string sourceBadge: state && state.source ? state.source.toUpperCase() : (useRainViewer ? "RAINVIEWER LIVE" : "")
     // The timeline (DESIGN.md): the station's frames oldest
     // first with the sweep in progress last; the engine owns the position.
@@ -67,8 +67,8 @@ Item {
     // progress. LIVE under ten minutes says only the age; STALE turns it
     // yellow; LOADING is accent; UNAVAILABLE and OFFLINE are red with the
     // last time. Archived, the badge and ARCHIVED SCAN say it all.
-    readonly property string condition: state && state.source === "live" ? state.connection.status : ""
-    readonly property bool alert: condition !== "" && condition !== "ok"
+    readonly property string condition: useRainViewer ? "ok" : (state && state.source === "live" ? state.connection.status : "")
+    readonly property bool alert: !useRainViewer && condition !== "" && condition !== "ok"
     readonly property color conditionColor: condition === "stale" ? theme.yellow
         : condition === "loading" ? theme.accent
         : condition === "unavailable" || condition === "offline" ? theme.red : theme.foreground
@@ -90,6 +90,7 @@ Item {
         return m < 60 ? m + " MIN" : h < 24 ? h + "H " + (m % 60) + "M" : Math.floor(h / 24) + "D " + (h % 24) + "H";
     }
     readonly property string sourceDetail: {
+        if (useRainViewer) return "LIVE · RADAR METEOROLÓGICO BR / GLOBAL";
         if (!state) return "";
         if (state.source === "archived") return "ARCHIVED SCAN";
         var last = newestComplete ? clock(newestComplete.scanTime, true) : "";
@@ -480,7 +481,7 @@ Item {
                 RowLayout {
                     id: siteChip
                     spacing: 5
-                    visible: app.locked || app.following
+                    visible: !app.useRainViewer && (app.locked || app.following)
                     readonly property color ink: app.locked ? app.theme.accent : Qt.alpha(app.theme.foreground, .55)
                     Glyph { glyph: app.locked ? "lock" : "follow"; ink: siteChip.ink }
                     LabelText {
@@ -568,7 +569,7 @@ Item {
                 // config.toml mistake stands there the same way until the
                 // file is fixed. The radar underneath stays clear.
                 LabelText {
-                    text: engine.rejection || app.configError || store.persistError || app.notice || app.sourceDetail
+                    text: app.notice || app.configError || store.persistError || (app.useRainViewer ? app.sourceDetail : (engine.rejection || app.sourceDetail))
                     color: engine.rejection || app.configError || store.persistError || app.notice ? app.theme.accent : app.conditionColor
                     opacity: engine.rejection || app.configError || store.persistError || app.notice || app.alert ? 1 : .5
                     visible: !win.compact || engine.rejection !== "" || app.configError !== "" || store.persistError !== "" || app.notice !== "" || app.alert
@@ -803,6 +804,7 @@ Item {
                 // placement); the lock is selected while locked.
                 Button {
                     id: searchButton
+                    visible: !app.useRainViewer
                     implicitHeight: 30
                     implicitWidth: contentItem.implicitWidth + (win.compact ? 14 : 24)
                     padding: 0
@@ -849,7 +851,28 @@ Item {
                     }
                 }
                 Button {
+                    id: smoothingChip
+                    visible: app.useRainViewer
+                    implicitHeight: 30
+                    implicitWidth: contentItem.implicitWidth + 18
+                    padding: 0
+                    opacity: hovered || activeFocus ? 1 : 0.85
+                    onClicked: RainViewerService.smooth = !RainViewerService.smooth
+                    contentItem: RowLayout {
+                        spacing: 6
+                        Item { Layout.fillWidth: true }
+                        LabelText { text: RainViewerService.smooth ? "SUAVIZADO" : "PIXELS BRUTOS" }
+                        Item { Layout.fillWidth: true }
+                    }
+                    background: Rectangle {
+                        color: smoothingChip.hovered || smoothingChip.activeFocus ? Qt.alpha(app.theme.accent, .25) : "transparent"
+                        border.width: 1
+                        border.color: smoothingChip.activeFocus || smoothingChip.hovered ? app.theme.accent : Qt.alpha(app.theme.foreground, .22)
+                    }
+                }
+                Button {
                     id: treatmentChip
+                    visible: !app.useRainViewer
                     implicitHeight: 30
                     implicitWidth: contentItem.implicitWidth + 18
                     padding: 0

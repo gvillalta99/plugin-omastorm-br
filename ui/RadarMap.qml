@@ -299,12 +299,30 @@ Item {
 
             // RainViewer radar tile overlay per Web Mercator tile
             Image {
+                id: rvTileImg
                 anchors.fill: parent
                 opacity: map.radarOpacity
-                smooth: true
+                smooth: RainViewerService.smooth
                 asynchronous: true
+                cache: false
                 source: RainViewerService.tileUrl(level, column, row)
                 visible: RainViewerService.currentPath !== ""
+
+                Connections {
+                    target: RainViewerService
+                    function onCurrentIndexChanged() {
+                        rvTileImg.source = ""
+                        rvTileImg.source = RainViewerService.tileUrl(level, column, row)
+                    }
+                    function onColorSchemeChanged() {
+                        rvTileImg.source = ""
+                        rvTileImg.source = RainViewerService.tileUrl(level, column, row)
+                    }
+                    function onSmoothChanged() {
+                        rvTileImg.source = ""
+                        rvTileImg.source = RainViewerService.tileUrl(level, column, row)
+                    }
+                }
             }
         }
     }
@@ -624,7 +642,7 @@ Item {
             }
         }
         Repeater {
-            model: map.sites.filter(s => s.id !== map.siteId)
+            model: RainViewerService.currentPath !== "" ? [] : map.sites.filter(s => s.id !== map.siteId)
             Rectangle {
                 required property var modelData
                 x: (map.mercatorX(modelData.lon)-map.siteMx)*map.worldPixels-3
@@ -675,17 +693,17 @@ Item {
                 }
             }
         }
-        Rectangle { x: -7; y: -.5; width: 14; height: 1; color: map.theme.foreground; visible: map.siteId !== "" }
-        Rectangle { x: -.5; y: -7; width: 1; height: 14; color: map.theme.foreground; visible: map.siteId !== "" }
+        Rectangle { x: -7; y: -.5; width: 14; height: 1; color: map.theme.foreground; visible: RainViewerService.currentPath === "" && map.siteId !== "" }
+        Rectangle { x: -.5; y: -7; width: 1; height: 14; color: map.theme.foreground; visible: RainViewerService.currentPath === "" && map.siteId !== "" }
         // The lock: an accent 1 px frame on the marker and the tag.
         Rectangle {
             x: -6; y: -6; width: 12; height: 12; color: "transparent"
-            visible: map.locked
+            visible: RainViewerService.currentPath === "" && map.locked
             border.width: 1; border.color: map.theme.accent
         }
         Rectangle {
             x: 7; y: 4; width: Math.floor(siteTag.implicitWidth) + 6; height: 16; color: map.theme.background
-            visible: map.siteId !== ""
+            visible: RainViewerService.currentPath === "" && map.siteId !== ""
             border.width: map.locked ? 1 : 0; border.color: map.theme.accent
             Text {
                 id: siteTag

@@ -109,8 +109,8 @@ FocusScope {
         RowLayout {
             Layout.fillWidth: true
             spacing: 6
-            Label { text: card.state && card.state.site ? card.state.site.id : (card.useRainViewer ? (session.placeName ? session.placeName.toUpperCase() : "RAINVIEWER BR") : "—"); font.bold: true; font.pixelSize: 14 }
-            Label { Layout.fillWidth: true; text: connection.site ? connection.site.name : (card.useRainViewer ? (session.placeName || "LIVE RADAR") : ""); opacity: .65 }
+            Label { text: card.useRainViewer ? (session.placeName ? session.placeName.toUpperCase() : "BRASIL / GLOBAL") : (card.state && card.state.site ? card.state.site.id : "—"); font.bold: true; font.pixelSize: 14 }
+            Label { Layout.fillWidth: true; text: card.useRainViewer ? "RADAR METEOROLÓGICO" : (connection.site ? connection.site.name : ""); opacity: .65 }
             Rectangle { width: 5; height: 5; radius: 3; color: card.statusColor }
             Label { text: card.statusText; color: card.statusColor; font.pixelSize: 11 }
         }
