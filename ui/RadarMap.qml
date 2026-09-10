@@ -297,30 +297,87 @@ Item {
                 onStatusChanged: if (status === ShaderEffect.Error) map.error = "Basemap GPU shader failed: " + log
             }
 
-            // RainViewer radar tile overlay per Web Mercator tile
-            Image {
-                id: rvTileImg
+            // RainViewer radar tile overlay per Web Mercator tile with double-buffering
+            Item {
+                id: rvTileContainer
                 anchors.fill: parent
                 opacity: map.radarOpacity
-                smooth: RainViewerService.smooth
-                asynchronous: true
-                cache: true
-                source: RainViewerService.tileUrl(level, column, row)
                 visible: RainViewerService.currentPath !== ""
+
+                // Active buffer: 0 (img0 front, img1 back) or 1 (img1 front, img0 back)
+                property int activeBuffer: 0
+
+                Image {
+                    id: img0
+                    anchors.fill: parent
+                    smooth: RainViewerService.smooth
+                    asynchronous: true
+                    cache: true
+                    opacity: rvTileContainer.activeBuffer === 0 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
+                    }
+                    source: RainViewerService.tileUrl(level, column, row)
+                    onStatusChanged: {
+                        if (status === Image.Ready && rvTileContainer.activeBuffer === 1) {
+                            // If img0 was loading the next frame, bring it forward
+                            rvTileContainer.activeBuffer = 0;
+                        }
+                    }
+                }
+
+                Image {
+                    id: img1
+                    anchors.fill: parent
+                    smooth: RainViewerService.smooth
+                    asynchronous: true
+                    cache: true
+                    opacity: rvTileContainer.activeBuffer === 1 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
+                    }
+                    onStatusChanged: {
+                        if (status === Image.Ready && rvTileContainer.activeBuffer === 0) {
+                            // If img1 was loading the next frame, bring it forward
+                            rvTileContainer.activeBuffer = 1;
+                        }
+                    }
+                }
+
+                function loadNextTile() {
+                    var nextUrl = RainViewerService.tileUrl(level, column, row);
+                    if (!nextUrl) return;
+
+                    if (activeBuffer === 0) {
+                        // img0 is currently visible; load next into img1
+                        if (img1.source === nextUrl) {
+                            if (img1.status === Image.Ready) activeBuffer = 1;
+                        } else {
+                            img1.source = nextUrl;
+                            if (img1.status === Image.Ready) activeBuffer = 1;
+                        }
+                    } else {
+                        // img1 is currently visible; load next into img0
+                        if (img0.source === nextUrl) {
+                            if (img0.status === Image.Ready) activeBuffer = 0;
+                        } else {
+                            img0.source = nextUrl;
+                            if (img0.status === Image.Ready) activeBuffer = 0;
+                        }
+                    }
+                }
 
                 Connections {
                     target: RainViewerService
                     function onCurrentIndexChanged() {
-                        var next = RainViewerService.tileUrl(level, column, row);
-                        if (rvTileImg.source !== next) rvTileImg.source = next;
+                        rvTileContainer.loadNextTile();
                     }
                     function onColorSchemeChanged() {
-                        var next = RainViewerService.tileUrl(level, column, row);
-                        if (rvTileImg.source !== next) rvTileImg.source = next;
+                        rvTileContainer.loadNextTile();
                     }
                     function onSmoothChanged() {
-                        var next = RainViewerService.tileUrl(level, column, row);
-                        if (rvTileImg.source !== next) rvTileImg.source = next;
+                        img0.smooth = RainViewerService.smooth;
+                        img1.smooth = RainViewerService.smooth;
                     }
                 }
             }

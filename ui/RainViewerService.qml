@@ -56,11 +56,14 @@ QtObject {
 
     // Tile URL helper for OpenStreetMap / Mercator z/x/y
     function tileUrl(z, x, y) {
-        if (!currentPath || !host) return "";
+        return tileUrlForPath(currentPath, z, x, y);
+    }
+
+    function tileUrlForPath(path, z, x, y) {
+        if (!path || !host) return "";
         var smoothFlag = smooth ? "1" : "0";
         var snowFlag = snow ? "1" : "0";
-        // host + path + /size/z/x/y/colorScheme/smooth_snow.png
-        return host + currentPath + "/512/" + z + "/" + x + "/" + y + "/" + colorScheme + "/" + smoothFlag + "_" + snowFlag + ".png";
+        return host + path + "/512/" + z + "/" + x + "/" + y + "/" + colorScheme + "/" + smoothFlag + "_" + snowFlag + ".png";
     }
 
     function step(delta) {
