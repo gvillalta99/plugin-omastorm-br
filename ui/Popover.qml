@@ -162,7 +162,7 @@ FocusScope {
                     Label {
                         Layout.fillWidth: true
                         text: WeatherService.conditionText
-                        font.pixelSize: 9.5
+                        font.pixelSize: 10
                         opacity: 0.7
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignRight
