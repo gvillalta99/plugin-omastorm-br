@@ -324,12 +324,16 @@ Item {
                 // Active buffer: 0 (img0 front, img1 back) or 1 (img1 front, img0 back)
                 property int activeBuffer: 0
 
+                readonly property var ptInfo: RainViewerService.parentTile(level, column, row, 7)
+                readonly property rect clipRect: level > 7 ? Qt.rect(ptInfo.subX, ptInfo.subY, ptInfo.subWidth, ptInfo.subHeight) : Qt.rect(0, 0, 0, 0)
+
                 Image {
                     id: img0
                     anchors.fill: parent
                     smooth: RainViewerService.smooth
                     asynchronous: true
                     cache: true
+                    sourceClipRect: rvTileContainer.clipRect
                     opacity: rvTileContainer.activeBuffer === 0 ? 1 : 0
                     Behavior on opacity {
                         NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
@@ -349,6 +353,7 @@ Item {
                     smooth: RainViewerService.smooth
                     asynchronous: true
                     cache: true
+                    sourceClipRect: rvTileContainer.clipRect
                     opacity: rvTileContainer.activeBuffer === 1 ? 1 : 0
                     Behavior on opacity {
                         NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }

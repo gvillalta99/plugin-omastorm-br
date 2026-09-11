@@ -54,16 +54,43 @@ QtObject {
     readonly property string currentPath: currentFrame ? currentFrame.path : ""
     readonly property int currentTime: currentFrame ? currentFrame.time : 0
 
+    // Helper to clamp zoom to max 7 (RainViewer free tier max zoom is 7)
+    // For z > 7, calculate parent tile at z=7 and sub-rect for overzoomed rendering
+    function parentTile(z, x, y, maxZ) {
+        var cap = (typeof maxZ === "number") ? maxZ : 7;
+        if (z <= cap) {
+            return { z: z, x: x, y: y, subX: 0, subY: 0, subWidth: 512, subHeight: 512, scale: 1 };
+        }
+        var factor = Math.pow(2, z - cap);
+        var px = Math.floor(x / factor);
+        var py = Math.floor(y / factor);
+        var subSize = 512 / factor;
+        var sx = (x % factor) * subSize;
+        var sy = (y % factor) * subSize;
+        return {
+            z: cap,
+            x: px,
+            y: py,
+            subX: sx,
+            subY: sy,
+            subWidth: subSize,
+            subHeight: subSize,
+            scale: factor
+        };
+    }
+
     // Tile URL helper for OpenStreetMap / Mercator z/x/y
     function tileUrl(z, x, y) {
-        return tileUrlForPath(currentPath, z, x, y);
+        var pt = parentTile(z, x, y, 7);
+        return tileUrlForPath(currentPath, pt.z, pt.x, pt.y);
     }
 
     function tileUrlForPath(path, z, x, y) {
         if (!path || !host) return "";
+        var pt = parentTile(z, x, y, 7);
         var smoothFlag = smooth ? "1" : "0";
         var snowFlag = snow ? "1" : "0";
-        return host + path + "/512/" + z + "/" + x + "/" + y + "/" + colorScheme + "/" + smoothFlag + "_" + snowFlag + ".png";
+        return host + path + "/512/" + pt.z + "/" + pt.x + "/" + pt.y + "/" + colorScheme + "/" + smoothFlag + "_" + snowFlag + ".png";
     }
 
     function step(delta) {
