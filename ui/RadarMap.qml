@@ -38,6 +38,7 @@ Item {
     readonly property int weakBelow: scan && weakFloor !== null && scan.scale > 0 ? Math.max(0, Math.min(256, Math.ceil(weakFloor * scan.scale + scan.offset))) : 0
     property int labelSize: 12
     property real radarOpacity: 1    // the radar layer alone; the basemap keeps its strength
+    property bool showWind: false    // overlay wind vectors/arrows on map
     property bool locked: false      // the accent frame on the active marker and tag (DESIGN.md, markers)
     // A frame with a scan time is radar to draw. The loading placeholder
     // (docs/protocol.md, frame.status: no scan time, one blank row) draws no
@@ -161,7 +162,23 @@ Item {
     // A state change re-asks even for an unchanged rectangle: a restarted
     // engine publishes under a new generation.
     onScanChanged: { scheduleLayout(); if (scan) { settle.reask = true; settle.restart(); } else { reportedLat = NaN; reportedSpan = NaN; } }
-    Timer { id: settle; interval: 120; property bool reask: true; onTriggered: { map.requestTiles(); map.reportCenter(); } }
+    Timer {
+        id: settle
+        interval: 120
+        property bool reask: true
+        onTriggered: {
+            map.requestTiles();
+            map.reportCenter();
+            if (map.showWind) {
+                WeatherService.fetchWindGrid(map.centerLat, map.centerLon, map.span);
+            }
+        }
+    }
+    onShowWindChanged: {
+        if (showWind && !isNaN(centerLat) && !isNaN(centerLon) && centerLat !== 0) {
+            WeatherService.fetchWindGrid(centerLat, centerLon, span);
+        }
+    }
     // Forgotten when the engine goes away, so a reconnect reports the centre
     // the camera is at rather than the one the old daemon knew.
     property real reportedLat: NaN
@@ -650,7 +667,68 @@ Item {
                 antialiasing: true
             }
         }
-        // Radar stations across SP / Brazil
+        // Wind vector field overlay (direction arrows colored by speed)
+        Repeater {
+            model: map.showWind ? WeatherService.windGrid : []
+            Item {
+                id: windPoint
+                required property var modelData
+                readonly property real wx: (map.mercatorX(modelData.lon) - map.siteMx) * map.worldPixels
+                readonly property real wy: (map.mercatorY(modelData.lat) - map.siteMy) * map.worldPixels
+                x: wx - 16; y: wy - 16
+                width: 32; height: 32
+                visible: map.showWind && overlayCamera.x + wx >= -20 && overlayCamera.x + wx <= map.width + 20
+                         && overlayCamera.y + wy >= -20 && overlayCamera.y + wy <= map.height + 20
+
+                // Arrow pointer rotated in direction the wind blows (dir + 180 or meteorological standard where dir is where wind comes from)
+                Item {
+                    anchors.centerIn: parent
+                    width: 24; height: 24
+                    rotation: modelData.dir !== undefined ? modelData.dir : 0
+
+                    // Stem
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.verticalCenter
+                        width: 2.5
+                        height: Math.min(14, Math.max(6, (modelData.speed || 10) * 0.45))
+                        color: WeatherService.windColor(modelData.speed)
+                        radius: 1
+                    }
+                    // Arrowhead pointing down (direction wind is blowing to, or standard arrow)
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.verticalCenter
+                        anchors.topMargin: -4
+                        text: "▼"
+                        font.pixelSize: 10
+                        color: WeatherService.windColor(modelData.speed)
+                    }
+                }
+
+                // Speed label badge
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.bottom
+                    anchors.topMargin: -4
+                    width: speedText.implicitWidth + 4
+                    height: 12
+                    radius: 2
+                    color: Qt.alpha(map.theme.background, 0.82)
+                    border.width: 1
+                    border.color: Qt.alpha(WeatherService.windColor(modelData.speed), 0.6)
+                    Text {
+                        id: speedText
+                        anchors.centerIn: parent
+                        text: Math.round(modelData.speed || 0)
+                        font.family: map.theme.font
+                        font.pixelSize: 8
+                        font.bold: true
+                        color: WeatherService.windColor(modelData.speed)
+                    }
+                }
+            }
+        }
         Repeater {
             model: map.brSites
             Item {

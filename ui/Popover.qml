@@ -139,6 +139,8 @@ FocusScope {
                     Label {
                         text: (isNaN(WeatherService.temperature) ? "" : Math.round(WeatherService.temperature) + "°C") +
                               (isNaN(WeatherService.humidity) ? "" : " · 💧 " + Math.round(WeatherService.humidity) + "%") +
+                              (isNaN(WeatherService.windSpeed) ? "" : " · 💨 " + Math.round(WeatherService.windSpeed) + "km/h " + WeatherService.windDirectionText) +
+                              (!isNaN(WeatherService.windGusts) && WeatherService.windGusts > WeatherService.windSpeed + 5 ? " (raj. " + Math.round(WeatherService.windGusts) + ")" : "") +
                               (isNaN(WeatherService.rain) || WeatherService.rain <= 0 ? "" : " · 🌧️ " + WeatherService.rain.toFixed(1) + "mm/h")
                         font.bold: true
                         font.pixelSize: 11
@@ -175,6 +177,7 @@ FocusScope {
                 weakFloor: card.session.weakFloor
                 labelSize: 10
                 radarOpacity: card.condition === "unavailable" ? .6 : 1
+                showWind: card.session.showWind
                 onTilesNeeded: (z, x0, y0, x1, y1) => connection.send({type: "tiles_needed", z: z, x0: x0, y0: y0, x1: x1, y1: y1})
                 function applyView() {
                     if (!card.session.hasView) return;
@@ -190,7 +193,35 @@ FocusScope {
                 target: card.session
                 function onViewChanged() { map.applyView(); }
             }
-            Label { anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8; text: "⤢"; font.pixelSize: 20; opacity: .65 }
+            RowLayout {
+                anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 6
+                spacing: 6
+                Rectangle {
+                    implicitWidth: windChipText.implicitWidth + 10; implicitHeight: 22
+                    color: card.session.showWind ? card.theme.accent : Qt.alpha(card.theme.background, .9)
+                    border.width: 1
+                    border.color: card.session.showWind ? card.theme.accent : Qt.alpha(card.theme.foreground, .3)
+                    radius: 3
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 3
+                        Label { text: "💨"; font.pixelSize: 10 }
+                        Label {
+                            id: windChipText
+                            text: "VENTO"
+                            font.pixelSize: 9
+                            font.bold: true
+                            color: card.session.showWind ? card.theme.background : card.theme.foreground
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: card.session.showWind = !card.session.showWind
+                    }
+                }
+                Label { text: "⤢"; font.pixelSize: 18; opacity: .65; Layout.alignment: Qt.AlignVCenter }
+            }
             RowLayout {
                 anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8
                 Rectangle {

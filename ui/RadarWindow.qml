@@ -531,7 +531,8 @@ Item {
                         }
                         LabelText {
                             visible: !win.compact && !isNaN(WeatherService.windSpeed)
-                            text: "💨 " + (isNaN(WeatherService.windSpeed) ? "" : Math.round(WeatherService.windSpeed) + " km/h " + WeatherService.windDirectionText)
+                            text: "💨 " + (isNaN(WeatherService.windSpeed) ? "" : Math.round(WeatherService.windSpeed) + " km/h " + WeatherService.windDirectionText) +
+                                  (!isNaN(WeatherService.windGusts) && WeatherService.windGusts > WeatherService.windSpeed + 5 ? " (raj. " + Math.round(WeatherService.windGusts) + " km/h)" : "")
                             opacity: 0.85
                         }
                         LabelText {
@@ -600,6 +601,7 @@ Item {
                     treatment: app.treatment
                     weakFloor: app.weakFloor
                     radarOpacity: app.condition === "unavailable" ? .6 : 1
+                    showWind: app.store.showWind
                     labelSize: win.compact ? 10 : 12
                     locked: app.locked
                     // A settled pan hands the centre to the engine, which switches
@@ -624,23 +626,58 @@ Item {
                 }
                 Connections { target: engine; function onTileReady(tile) { map.tileReady(tile); } }
                 LabelText { anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 12; text: "N ↑"; opacity: .75 }
-                // The `?` chip in the map's top-right corner (DESIGN.md, window
-                // chrome) opens the keys sheet, as does the key itself.
-                Rectangle {
-                    id: helpChip
+                RowLayout {
                     anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 10
-                    width: helpRow.implicitWidth + 12; height: 22
-                    color: Qt.alpha(app.theme.background, .9)
-                    opacity: helpArea.containsMouse ? 1 : .7
-                    visible: !!app.state
-                    RowLayout {
-                        id: helpRow
-                        anchors.centerIn: parent
-                        spacing: 5
-                        Glyph { glyph: "keys" }
-                        LabelText { text: "?"; font.pixelSize: 10 }
+                    spacing: 8
+                    // Wind overlay toggle chip
+                    Rectangle {
+                        id: windChip
+                        width: windRow.implicitWidth + 12; height: 22
+                        radius: 3
+                        color: app.store.showWind ? app.theme.accent : Qt.alpha(app.theme.background, .9)
+                        border.width: 1
+                        border.color: app.store.showWind ? app.theme.accent : Qt.alpha(app.theme.foreground, .3)
+                        opacity: windArea.containsMouse ? 1 : .85
+                        RowLayout {
+                            id: windRow
+                            anchors.centerIn: parent
+                            spacing: 4
+                            LabelText { text: "💨"; font.pixelSize: 10 }
+                            LabelText {
+                                text: "VENTO"
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: app.store.showWind ? app.theme.background : app.theme.foreground
+                            }
+                        }
+                        MouseArea {
+                            id: windArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: app.store.showWind = !app.store.showWind
+                        }
                     }
-                    MouseArea { id: helpArea; anchors.fill: parent; hoverEnabled: true; onClicked: app.run("help") }
+                    // The `?` chip in the map's top-right corner (DESIGN.md, window
+                    // chrome) opens the keys sheet, as does the key itself.
+                    Rectangle {
+                        id: helpChip
+                        width: helpRow.implicitWidth + 12; height: 22
+                        radius: 3
+                        color: Qt.alpha(app.theme.background, .9)
+                        border.width: 1
+                        border.color: Qt.alpha(app.theme.foreground, .2)
+                        opacity: helpArea.containsMouse ? 1 : .7
+                        visible: !!app.state
+                        RowLayout {
+                            id: helpRow
+                            anchors.centerIn: parent
+                            spacing: 5
+                            Glyph { glyph: "keys" }
+                            LabelText { text: "?"; font.pixelSize: 10 }
+                        }
+                        MouseArea { id: helpArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: app.run("help") }
+                    }
                 }
                 // The engine's attribution verbatim while an osm tile is on
                 // screen (docs/protocol.md, state.basemap); Natural Earth otherwise.

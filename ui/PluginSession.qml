@@ -15,6 +15,7 @@ QtObject {
     property Theme theme: Theme {}
     property bool windowOpen: false
     property bool initialized: false
+    property bool showWind: false
     property string treatment: Quickshell.env("OMASTORM_STYLE") || "GLYPHS"
     // The weak-return floor in dBZ, or null for every measured return
     // (DESIGN.md, weak-return floor); config.toml's weak_floor and the `w`
