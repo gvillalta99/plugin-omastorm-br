@@ -51,7 +51,7 @@ FocusScope {
     }
     signal expandRequested()
     signal closeRequested()
-    implicitWidth: 312
+    implicitWidth: 352
     implicitHeight: layout.implicitHeight
     Engine { id: connection }
     function step(delta) {
@@ -115,8 +115,20 @@ FocusScope {
         RowLayout {
             Layout.fillWidth: true
             spacing: 6
-            Label { text: card.useRainViewer ? (session.placeName ? session.placeName.toUpperCase() : "BRASIL / GLOBAL") : (card.state && card.state.site ? card.state.site.id : "—"); font.bold: true; font.pixelSize: 14 }
-            Label { Layout.fillWidth: true; text: card.useRainViewer ? "RADAR METEOROLÓGICO" : (connection.site ? connection.site.name : ""); opacity: .65 }
+            Label {
+                text: card.useRainViewer ? (session.placeName ? session.placeName.toUpperCase() : "BRASIL / GLOBAL") : (card.state && card.state.site ? card.state.site.id : "—")
+                font.bold: true
+                font.pixelSize: 13
+                elide: Text.ElideRight
+                Layout.maximumWidth: 180
+            }
+            Label {
+                Layout.fillWidth: true
+                text: card.useRainViewer ? "RADAR" : (connection.site ? connection.site.name : "")
+                opacity: .6
+                font.pixelSize: 11
+                elide: Text.ElideRight
+            }
             Rectangle { width: 5; height: 5; radius: 3; color: card.statusColor }
             Label { text: card.statusText; color: card.statusColor; font.pixelSize: 11 }
         }
@@ -126,7 +138,7 @@ FocusScope {
             spacing: 8
             Rectangle {
                 Layout.fillWidth: true
-                height: 24
+                implicitHeight: 24
                 color: Qt.alpha(card.theme.foreground, 0.06)
                 border.width: 1
                 border.color: Qt.alpha(card.theme.foreground, 0.12)
@@ -135,21 +147,22 @@ FocusScope {
                     anchors.fill: parent
                     anchors.leftMargin: 8
                     anchors.rightMargin: 8
-                    spacing: 8
+                    spacing: 6
                     Label {
                         text: (isNaN(WeatherService.temperature) ? "" : Math.round(WeatherService.temperature) + "°C") +
-                              (isNaN(WeatherService.humidity) ? "" : " · 💧 " + Math.round(WeatherService.humidity) + "%") +
+                              (isNaN(WeatherService.humidity) ? "" : " · 💧" + Math.round(WeatherService.humidity) + "%") +
                               (isNaN(WeatherService.windSpeed) ? "" : " · 💨 " + Math.round(WeatherService.windSpeed) + "km/h " + WeatherService.windDirectionText) +
                               (!isNaN(WeatherService.windGusts) && WeatherService.windGusts > WeatherService.windSpeed + 5 ? " (raj. " + Math.round(WeatherService.windGusts) + ")" : "") +
-                              (isNaN(WeatherService.rain) || WeatherService.rain <= 0 ? "" : " · 🌧️ " + WeatherService.rain.toFixed(1) + "mm/h")
+                              (isNaN(WeatherService.rain) || WeatherService.rain <= 0 ? "" : " · 🌧️" + WeatherService.rain.toFixed(1) + "mm/h")
                         font.bold: true
-                        font.pixelSize: 11
+                        font.pixelSize: 10
                         color: card.theme.accent
+                        elide: Text.ElideRight
                     }
                     Label {
                         Layout.fillWidth: true
                         text: WeatherService.conditionText
-                        font.pixelSize: 10
+                        font.pixelSize: 9.5
                         opacity: 0.7
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignRight
@@ -193,18 +206,24 @@ FocusScope {
                 target: card.session
                 function onViewChanged() { map.applyView(); }
             }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: card.expandRequested()
+            }
             RowLayout {
                 anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 6
                 spacing: 6
                 Rectangle {
-                    implicitWidth: windChipText.implicitWidth + 10; implicitHeight: 22
+                    implicitWidth: windRow.implicitWidth + 12; implicitHeight: 22
                     color: card.session.showWind ? card.theme.accent : Qt.alpha(card.theme.background, .9)
                     border.width: 1
                     border.color: card.session.showWind ? card.theme.accent : Qt.alpha(card.theme.foreground, .3)
                     radius: 3
                     RowLayout {
+                        id: windRow
                         anchors.centerIn: parent
-                        spacing: 3
+                        spacing: 4
                         Label { text: "💨"; font.pixelSize: 10 }
                         Label {
                             id: windChipText
@@ -217,10 +236,33 @@ FocusScope {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: card.session.showWind = !card.session.showWind
+                        onClicked: mouse => {
+                            mouse.accepted = true;
+                            card.session.showWind = !card.session.showWind;
+                        }
                     }
                 }
-                Label { text: "⤢"; font.pixelSize: 18; opacity: .65; Layout.alignment: Qt.AlignVCenter }
+                Rectangle {
+                    implicitWidth: 22; implicitHeight: 22
+                    color: Qt.alpha(card.theme.background, .9)
+                    border.width: 1
+                    border.color: Qt.alpha(card.theme.foreground, .3)
+                    radius: 3
+                    Label {
+                        anchors.centerIn: parent
+                        text: "⤢"
+                        font.pixelSize: 13
+                        opacity: .8
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mouse => {
+                            mouse.accepted = true;
+                            card.expandRequested();
+                        }
+                    }
+                }
             }
             RowLayout {
                 anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8
@@ -238,7 +280,6 @@ FocusScope {
                         text: card.scan && card.scan.scanTime ? Qt.formatDateTime(new Date(card.scan.scanTime), card.condition === "archived" ? "yyyy-MM-dd HH:mm t" : "HH:mm t") : "" }
                 }
             }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: card.expandRequested() }
             Label {
                 anchors.centerIn: parent; width: parent.width - 24; wrapMode: Text.Wrap
                 horizontalAlignment: Text.AlignHCenter

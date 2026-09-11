@@ -179,6 +179,14 @@ Item {
             WeatherService.fetchWindGrid(centerLat, centerLon, span);
         }
     }
+    Connections {
+        target: RainViewerService
+        function onCurrentTimeChanged() {
+            if (RainViewerService.currentTime > 0) {
+                WeatherService.updateForTime(RainViewerService.currentTime);
+            }
+        }
+    }
     // Forgotten when the engine goes away, so a reconnect reports the centre
     // the camera is at rather than the one the old daemon knew.
     property real reportedLat: NaN

@@ -53,7 +53,7 @@ BarWidget {
         // includes the 2 px border (KeyboardPanel adds border to padding).
         padding: 12
         borderSpec: Border.flat(Color.accent, 2)
-        contentWidth: 336
+        contentWidth: 376
         contentHeight: content.item ? content.item.implicitHeight + 24 : 420
         focusTarget: content.item
         Loader {
